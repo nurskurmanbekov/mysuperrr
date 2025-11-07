@@ -16,7 +16,7 @@ class GeoZoneService(
     private val geoZoneRepository: GeoZoneRepository,
     private val geoZoneViolationRepository: GeoZoneViolationRepository,
     private val clientRepository: ClientRepository,
-    private val fcmService: FCMservice
+    private val fcmService: FcmService
 ) {
 
     fun createGeoZone(clientId: Long, name: String, polygonCoordinates: List<List<Double>>): GeoZone {
