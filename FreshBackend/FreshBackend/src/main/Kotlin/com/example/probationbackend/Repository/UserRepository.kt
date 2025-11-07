@@ -8,5 +8,7 @@ import java.util.Optional
 @Repository
 interface UserRepository : JpaRepository<User, Long> {
     fun findByInn(inn: String): Optional<User>
-    fun findByUniqueId(uniqueId: String): Optional<User> // Для поиска по uniqueId (для Traccar)
+    fun findByUniqueId(uniqueId: String): Optional<User>
+    fun findByUserType(userType: String): List<User>
+    fun findByMruIdAndUserType(mruId: String, userType: String): List<User>
 }

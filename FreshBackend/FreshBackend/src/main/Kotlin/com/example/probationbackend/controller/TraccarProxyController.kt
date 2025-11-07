@@ -1,11 +1,16 @@
 package com.example.probationbackend.controller
 
+import com.example.probationbackend.repository.ClientRepository
+import com.example.probationbackend.service.GeoZoneService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/api/traccar")
-class TraccarProxyController {
+class TraccarProxyController(
+    private val geoZoneService: GeoZoneService,
+    private val clientRepository: ClientRepository
+) {
 
     // Простой метод для теста
     @GetMapping("/devices")
@@ -24,6 +29,26 @@ class TraccarProxyController {
     @PostMapping("/positions")
     fun receivePosition(@RequestBody positionData: Map<String, Any>): ResponseEntity<*> {
         println("Получены GPS данные: $positionData")
+
+        // Извлекаем координаты
+        val lat = positionData["lat"] as? Double
+        val lon = positionData["lon"] as? Double
+        val deviceId = positionData["id"] as? String
+
+        // Проверяем геозоны если есть координаты
+        if (lat != null && lon != null && deviceId != null) {
+            try {
+                // Находим клиента по uniqueId
+                val client = clientRepository.findByUniqueId(deviceId).orElse(null)
+                if (client != null) {
+                    // Проверяем нарушения геозон
+                    geoZoneService.checkGeoZoneViolations(client.id!!, lat, lon)
+                }
+            } catch (e: Exception) {
+                println("Ошибка проверки геозон: ${e.message}")
+            }
+        }
+
         return ResponseEntity.ok(mapOf(
             "status" to "received",
             "deviceId" to positionData["deviceId"],

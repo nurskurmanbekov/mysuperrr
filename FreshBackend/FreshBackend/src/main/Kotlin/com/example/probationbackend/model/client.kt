@@ -92,5 +92,10 @@ data class Client(
     var appPassword: String, // Хранить только хэш!
 
     @Column(name = "photo_key") // Ключ для фото (например, уникальный ID или хэш)
-    var photoKey: String? = null
+    var photoKey: String? = null,
+
+    // НОВОЕ: Связь с районом для RBAC
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "district_id")
+    var district: District? = null
 )

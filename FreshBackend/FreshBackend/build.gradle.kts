@@ -89,7 +89,7 @@ tasks.withType<Test> {
 
 // Flyway task configuration (опционально, можно настроить через application.properties)
 flyway {
-    url = "jdbc:postgresql://localhost:5432/probation_db"
-    user = "probation_user"
-    password = "probation_password"
+    url = "jdbc:postgresql://localhost:5432/probationmob"
+    user = "postgres"
+    password = "556055"
 }
