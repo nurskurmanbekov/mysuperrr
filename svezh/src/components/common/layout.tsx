@@ -15,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navItems = [
     { path: '/', label: 'Дашборд' },
     { path: '/map', label: 'Карта' },
+    { path: '/playback', label: 'История' },
     { path: '/registry', label: 'Реестр' },
     { path: '/devices', label: 'Устройства' },
     { path: '/events', label: 'События' },

@@ -9,6 +9,7 @@ import Events from './components/events/events';
 import Layout from './components/common/layout';
 import AdminPanel from './components/admin/AdminPanel';
 import GeoZoneManager from './components/geozones/GeoZoneManager';
+import TrackPlayback from './components/playback/TrackPlayback';
 
 // Импортируем карту с ленивой загрузкой
 const RealMap = React.lazy(() => import('./components/map/RealMap'));
@@ -74,6 +75,13 @@ const App: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <GeoZoneManager />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/playback" element={
+            <ProtectedRoute>
+              <Layout>
+                <TrackPlayback />
               </Layout>
             </ProtectedRoute>
           } />
