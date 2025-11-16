@@ -36,7 +36,7 @@ class TestController(
         )
     }
 
-    @PostMapping("/generate-hash")
+    @GetMapping("/generate-hash")
     fun generateHash(@RequestParam password: String): Map<String, String> {
         val hash = passwordEncoder.encode(password)
         return mapOf(
