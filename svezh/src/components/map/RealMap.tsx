@@ -167,9 +167,9 @@ const RealMap: React.FC = () => {
     <div className="real-map-page">
       <div className="map-container-wrapper" style={{ position: 'relative', height: '100%', width: '100%' }}>
         <MapContainer
-          center={KYRGYZSTAN_CENTER}
-          zoom={7}
-          minZoom={6}
+          bounds={KYRGYZSTAN_BOUNDS}
+          boundsOptions={{ padding: [20, 20] }}
+          minZoom={7}
           maxZoom={18}
           maxBounds={KYRGYZSTAN_BOUNDS}
           maxBoundsViscosity={1.0}
