@@ -1,6 +1,6 @@
 // components/map/RealMap.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polygon } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import api from '../../services/api';
 import 'leaflet/dist/leaflet.css';
 import './RealMap.css';
@@ -56,65 +56,10 @@ interface ClientWithPosition {
 // Координаты центра Кыргызстана для показа всей страны
 const KYRGYZSTAN_CENTER = [41.20, 74.77] as [number, number];
 
-// Границы Кыргызстана (юго-запад, северо-восток)
+// Границы Кыргызстана (юго-запад, северо-восток) для ограничения карты
 const KYRGYZSTAN_BOUNDS: [[number, number], [number, number]] = [
   [39.17, 69.25], // Юго-западный угол
   [43.24, 80.28]  // Северо-восточный угол
-];
-
-// Упрощенный полигон границы Кыргызстана (красная жирная линия)
-const KYRGYZSTAN_BORDER: [number, number][] = [
-  [43.238, 69.464], // Северо-запад (граница с Казахстаном)
-  [42.878, 70.389],
-  [42.886, 71.014],
-  [42.988, 71.760],
-  [43.015, 72.775],
-  [42.985, 73.489],
-  [42.880, 74.213],
-  [42.856, 74.627], // Бишкек область
-  [42.871, 75.137],
-  [42.999, 75.638],
-  [43.015, 76.243],
-  [42.988, 77.014],
-  [42.880, 77.825],
-  [42.828, 78.364],
-  [42.779, 78.762],
-  [42.656, 79.143],
-  [42.398, 79.673],
-  [42.036, 80.117], // Восток (граница с Китаем)
-  [41.765, 80.225],
-  [41.495, 80.119],
-  [41.238, 79.919],
-  [41.057, 79.641],
-  [40.881, 79.289],
-  [40.665, 78.931],
-  [40.445, 78.476],
-  [40.207, 77.989],
-  [39.899, 77.514],
-  [39.718, 77.085],
-  [39.572, 76.551],
-  [39.433, 75.982],
-  [39.313, 75.389],
-  [39.245, 74.776],
-  [39.192, 74.055],
-  [39.165, 73.451], // Юг (граница с Таджикистаном)
-  [39.298, 72.738],
-  [39.432, 72.193],
-  [39.567, 71.759],
-  [39.719, 71.276],
-  [39.862, 70.866],
-  [40.014, 70.548],
-  [40.244, 70.389],
-  [40.542, 70.241],
-  [40.877, 70.051],
-  [41.198, 69.778],
-  [41.498, 69.624],
-  [41.765, 69.515],
-  [42.028, 69.459],
-  [42.356, 69.434],
-  [42.679, 69.426],
-  [42.978, 69.438],
-  [43.238, 69.464], // Замыкаем полигон
 ];
 
 const RealMap: React.FC = () => {
@@ -222,8 +167,9 @@ const RealMap: React.FC = () => {
     <div className="real-map-page">
       <div className="map-container-wrapper" style={{ position: 'relative', height: '100%', width: '100%' }}>
         <MapContainer
-          center={KYRGYZSTAN_CENTER}
-          zoom={7}
+          bounds={KYRGYZSTAN_BOUNDS}
+          boundsOptions={{ padding: [50, 50] }}
+          maxBounds={KYRGYZSTAN_BOUNDS}
           minZoom={7}
           maxZoom={18}
           scrollWheelZoom={true}
@@ -241,40 +187,6 @@ const RealMap: React.FC = () => {
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-
-          {/* Маска - затемняем все кроме Кыргызстана */}
-          <Polygon
-            positions={[
-              // Внешний квадрат (весь мир)
-              [
-                [85, -180],
-                [85, 180],
-                [-85, 180],
-                [-85, -180],
-                [85, -180],
-              ],
-              // Внутренний полигон (Кыргызстан) - вырезаем эту область
-              KYRGYZSTAN_BORDER
-            ]}
-            pathOptions={{
-              color: 'transparent',
-              fillColor: '#000000',    // Черный цвет
-              fillOpacity: 0.7,        // 70% прозрачности для затемнения
-              weight: 0
-            }}
-          />
-
-          {/* Красная жирная граница Кыргызстана */}
-          <Polygon
-            positions={KYRGYZSTAN_BORDER}
-            pathOptions={{
-              color: '#DC2626',        // Яркий красный цвет
-              weight: 5,               // Очень жирная линия (5px)
-              opacity: 1,              // Полная непрозрачность
-              fillColor: 'transparent', // Без заливки
-              fillOpacity: 0
-            }}
           />
 
           {clientsWithValidPositions.map(client => {
