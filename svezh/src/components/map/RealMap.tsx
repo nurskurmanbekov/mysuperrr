@@ -53,8 +53,14 @@ interface ClientWithPosition {
   };
 }
 
-// Координаты Бишкека
-const BISHKEK_CENTER = [42.8746, 74.5698] as [number, number];
+// Координаты центра Кыргызстана для показа всей страны
+const KYRGYZSTAN_CENTER = [41.20, 74.77] as [number, number];
+
+// Границы Кыргызстана (юго-запад, северо-восток)
+const KYRGYZSTAN_BOUNDS: [[number, number], [number, number]] = [
+  [39.17, 69.25], // Юго-западный угол
+  [43.24, 80.28]  // Северо-восточный угол
+];
 
 const RealMap: React.FC = () => {
   const [clients, setClients] = useState<ClientWithPosition[]>([]);
@@ -161,8 +167,12 @@ const RealMap: React.FC = () => {
     <div className="real-map-page">
       <div className="map-container-wrapper" style={{ position: 'relative', height: '100%', width: '100%' }}>
         <MapContainer
-          center={BISHKEK_CENTER}
-          zoom={12}
+          center={KYRGYZSTAN_CENTER}
+          zoom={7}
+          minZoom={6}
+          maxZoom={18}
+          maxBounds={KYRGYZSTAN_BOUNDS}
+          maxBoundsViscosity={1.0}
           style={{
             height: '100%',
             width: '100%',
