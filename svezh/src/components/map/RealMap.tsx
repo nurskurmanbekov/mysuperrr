@@ -1,10 +1,32 @@
 // components/map/RealMap.tsx
 import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import api from '../../services/api';
 import 'leaflet/dist/leaflet.css';
 import './RealMap.css';
 import L from 'leaflet';
+
+// Компонент для установки строгих границ
+const SetMapBounds: React.FC = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    // Устанавливаем границы при загрузке
+    const bounds = L.latLngBounds(
+      L.latLng(39.17, 69.25), // Юго-запад
+      L.latLng(43.24, 80.28)  // Северо-восток
+    );
+    map.fitBounds(bounds, { padding: [10, 10] });
+
+    // Запрещаем выход за границы
+    map.setMaxBounds(bounds);
+    map.on('drag', () => {
+      map.panInsideBounds(bounds, { animate: false });
+    });
+  }, [map]);
+
+  return null;
+};
 
 // Кастомная иконка с фото осужденного
 const createPhotoIcon = (client: ClientWithPosition) => {
@@ -167,12 +189,11 @@ const RealMap: React.FC = () => {
     <div className="real-map-page">
       <div className="map-container-wrapper" style={{ position: 'relative', height: '100%', width: '100%' }}>
         <MapContainer
-          bounds={KYRGYZSTAN_BOUNDS}
-          boundsOptions={{ padding: [20, 20] }}
+          center={KYRGYZSTAN_CENTER}
+          zoom={7}
           minZoom={7}
           maxZoom={18}
-          maxBounds={KYRGYZSTAN_BOUNDS}
-          maxBoundsViscosity={1.0}
+          scrollWheelZoom={true}
           style={{
             height: '100%',
             width: '100%',
@@ -184,6 +205,7 @@ const RealMap: React.FC = () => {
           }}
           className="real-map"
         >
+          <SetMapBounds />
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

@@ -5,6 +5,24 @@
   width: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.map-container-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Ограничение карты - скрываем все что за пределами */
+.real-map {
+  clip-path: inset(0);
+}
+
+/* Убираем серые области за пределами карты */
+.leaflet-container {
+  background: #a6cee3 !important;
 }
 
 /* Маркеры с фотографиями */
