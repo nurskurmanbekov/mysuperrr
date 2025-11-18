@@ -66,7 +66,6 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
         style={styles.camera}
         type={cameraType}
         ref={ref => setCameraRef(ref)}
-        ratio="1:1"
       >
         <View style={styles.overlay}>
           {/* Рамка для лица */}
