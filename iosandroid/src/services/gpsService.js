@@ -282,9 +282,9 @@ class GPSService {
   // Отправка через Spring Boot бэкенд (который сам пересылает в Traccar)
   async sendViaSpringBoot(positionData) {
     try {
-      const API_BASE_URL = 'https://unprescribed-barefootedly-jenni.ngrok-free.dev/api';
+      const API_BASE_URL = 'http://85.113.27.42/api';
 
-      console.log('🚀 Отправка GPS через Spring Boot API:', {
+      console.log('🚀 Отправка GPS через Nginx → Spring Boot API:', {
         id: positionData.id,
         lat: positionData.lat,
         lon: positionData.lon,
