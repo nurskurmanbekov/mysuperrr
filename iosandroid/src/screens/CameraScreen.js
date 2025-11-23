@@ -15,13 +15,24 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
   const [facing, setFacing] = useState(mode);
 
   const takePicture = async () => {
-    if (!cameraRef.current) return;
+    if (!cameraRef.current) {
+      console.log('❌ Camera ref is null');
+      Alert.alert('Ошибка', 'Камера не готова. Попробуйте еще раз.');
+      return;
+    }
 
     setLoading(true);
     try {
+      console.log('📸 Taking picture...');
+
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
+        base64: false,
+        exif: false,
+        skipProcessing: false,
       });
+
+      console.log('✅ Photo taken:', photo.uri);
 
       // Конвертируем фото в нужный формат
       const processedPhoto = {
@@ -32,8 +43,9 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
 
       onPhotoTaken(processedPhoto);
     } catch (error) {
-      console.log('Error taking picture:', error);
-      Alert.alert('Ошибка', 'Не удалось сделать фото');
+      console.log('❌ Error taking picture:', error);
+      console.log('Error details:', JSON.stringify(error));
+      Alert.alert('Ошибка', `Не удалось сделать фото: ${error.message || 'Неизвестная ошибка'}`);
     } finally {
       setLoading(false);
     }
