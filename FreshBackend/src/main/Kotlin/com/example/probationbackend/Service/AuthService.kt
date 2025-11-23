@@ -3,6 +3,7 @@ package com.example.probationbackend.service
 
 import com.example.probationbackend.model.User
 import com.example.probationbackend.repository.UserRepository
+import com.example.probationbackend.repository.ClientRepository
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -12,17 +13,49 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class AuthService(
     private val userRepository: UserRepository,
+    private val clientRepository: ClientRepository,
     private val passwordEncoder: PasswordEncoder,
     private val objectMapper: ObjectMapper
 ) {
 
     fun authenticate(inn: String, rawPassword: String): User? {
-        val user = userRepository.findByInn(inn).orElse(null) ?: return null
-        return if (passwordEncoder.matches(rawPassword, user.passwordHash)) {
-            user
-        } else {
-            null
+        // Сначала ищем в таблице users (сотрудники/администраторы)
+        val user = userRepository.findByInn(inn).orElse(null)
+        if (user != null) {
+            return if (passwordEncoder.matches(rawPassword, user.passwordHash)) {
+                user
+            } else {
+                null
+            }
         }
+
+        // Если не нашли в users, ищем в таблице clients (осужденные)
+        val client = clientRepository.findByInn(inn).orElse(null)
+        if (client != null) {
+            // Для клиентов пароль хранится в app_password
+            // ВНИМАНИЕ: В текущей версии пароль НЕ хеширован в БД (password123)
+            // Проверяем как обычный текст (для совместимости с существующими данными)
+            if (client.appPassword == rawPassword) {
+                // Создаем временный объект User для клиента
+                return User(
+                    id = client.id,
+                    inn = client.inn ?: "",
+                    passwordHash = client.appPassword, // Не используется для клиентов
+                    uniqueId = client.uniqueId ?: "client_${client.id}",
+                    fcmToken = null,
+                    userType = "probationer",
+                    mruId = null,
+                    attributes = mapOf(
+                        "role" to "probationer",
+                        "administrator" to false,
+                        "clientId" to (client.id ?: 0),
+                        "fio" to client.fio
+                    )
+                )
+            }
+        }
+
+        return null
     }
     fun findUserById(id: Long): User? {
         return userRepository.findById(id).orElse(null)

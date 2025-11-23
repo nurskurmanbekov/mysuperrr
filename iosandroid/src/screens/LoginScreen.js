@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../store/authContext';
 
-const LoginScreen = () => {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +29,9 @@ const LoginScreen = () => {
 
     if (!result.success) {
       Alert.alert('Ошибка входа', result.message);
+    } else {
+      // ИСПРАВЛЕНИЕ: После успешного логина переходим на главный экран
+      navigation.replace('Home');
     }
   };
 
