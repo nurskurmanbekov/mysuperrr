@@ -1,6 +1,6 @@
 // Базовые настройки API
 export const API_CONFIG = {
-  BASE_URL: 'http://85.113.27.42/api',  // Nginx → Spring Boot :8083
+  BASE_URL: 'http://85.113.27.42:8530/api',  // Используем порт 8530 → 192.168.88.24:80
   TIMEOUT: 10000,
   RETRY_ATTEMPTS: 3,
   RETRY_DELAY: 1000,
@@ -8,10 +8,10 @@ export const API_CONFIG = {
 
 // URL для Traccar GPS данных
 export const TRACCAR_CONFIG = {
-  // Nginx проксирует на Traccar :8082
-  GPS_ENDPOINT: 'http://85.113.27.42',
-  API_ENDPOINT: 'http://85.113.27.42/api/traccar',
-  TRACCAR_PORT: 80,  // Через Nginx используем стандартный порт
+  // Через порт 8530
+  GPS_ENDPOINT: 'http://85.113.27.42:8530',
+  API_ENDPOINT: 'http://85.113.27.42:8530/api/traccar',
+  TRACCAR_PORT: 8530,  // Используем порт 8530
 };
 
 // Коды ошибок
