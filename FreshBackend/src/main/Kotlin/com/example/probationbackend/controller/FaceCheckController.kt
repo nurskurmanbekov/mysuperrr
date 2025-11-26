@@ -3,6 +3,7 @@ package com.example.probationbackend.controller
 import com.example.probationbackend.dto.FaceCheckRegisterTokenRequest
 import com.example.probationbackend.dto.FaceCheckResultRequest
 import com.example.probationbackend.model.FaceCheckEvent
+import com.example.probationbackend.repository.ClientRepository
 import com.example.probationbackend.repository.FaceCheckEventRepository
 import com.example.probationbackend.repository.UserRepository
 import com.example.probationbackend.service.FaceCheckService
@@ -23,6 +24,7 @@ class FaceCheckController(
     private val photoStorageService: PhotoStorageService,
     private val fcmService: FcmService,
     private val userRepository: UserRepository,
+    private val clientRepository: ClientRepository,
     private val traccarService: TraccarService, // ИСПРАВЛЕНО: добавлена запятая
     private val faceCheckEventRepository: FaceCheckEventRepository
 ) {
@@ -55,8 +57,20 @@ class FaceCheckController(
     fun receiveResult(@RequestBody request: FaceCheckResultRequest): ResponseEntity<*> {
         try {
             // 1. Найти пользователя по userId (обычно это uniqueId/ИНН)
+            // Сначала ищем в users (администраторы), затем в clients (осуждённые)
+            var userId: Long? = null
             val user = userRepository.findByUniqueId(request.user_id).orElse(null)
-                ?: return ResponseEntity.badRequest().body(mapOf("error" to "User not found for userId: ${request.user_id}"))
+            if (user != null) {
+                userId = user.id
+            } else {
+                // Если не найден в users, ищем в clients
+                val client = clientRepository.findByUniqueId(request.user_id).orElse(null)
+                if (client != null) {
+                    userId = client.id
+                } else {
+                    return ResponseEntity.badRequest().body(mapOf("error" to "User not found for userId: ${request.user_id}"))
+                }
+            }
 
             // 2. Найти deviceId по device_id (если device_id — это uniqueId)
             var deviceId: Long? = null
@@ -77,7 +91,7 @@ class FaceCheckController(
 
             // 4. Создать событие FaceCheckEvent
             val faceCheckEvent = FaceCheckEvent(
-                userId = user.id!!,
+                userId = userId!!,
                 deviceId = deviceId,
                 checkId = request.check_id,
                 outcome = request.outcome,
@@ -103,15 +117,27 @@ class FaceCheckController(
     fun registerToken(@RequestBody request: FaceCheckRegisterTokenRequest): ResponseEntity<Any> {
         try {
             // Найти пользователя по uniqueId (device_unique в DTO)
+            // Сначала ищем в users (администраторы), затем в clients (осуждённые)
             val user = userRepository.findByUniqueId(request.device_unique).orElse(null)
-                ?: return ResponseEntity.badRequest().body(mapOf("error" to "User not found for uniqueId: ${request.device_unique}"))
+            if (user != null) {
+                // Обновить fcmToken для пользователя
+                user.fcmToken = request.fcm_token
+                userRepository.save(user)
+                println("Registered FCM token ${request.fcm_token} for user: ${request.device_unique}")
+                return ResponseEntity.ok(mapOf("status" to "success"))
+            }
 
-            // Обновить fcmToken в БД
-            user.fcmToken = request.fcm_token
-            userRepository.save(user)
+            // Если не найден в users, проверяем clients
+            // Примечание: таблица clients не имеет поля fcm_token,
+            // поэтому токен не сохраняется для клиентов
+            val client = clientRepository.findByUniqueId(request.device_unique).orElse(null)
+            if (client != null) {
+                // Для клиентов токен не сохраняется (нет поля fcm_token в clients)
+                println("FCM token registration skipped for client: ${request.device_unique} (clients table has no fcm_token field)")
+                return ResponseEntity.ok(mapOf("status" to "success", "note" to "FCM not supported for clients"))
+            }
 
-            println("Registered FCM token ${request.fcm_token} for user: ${request.device_unique}")
-            return ResponseEntity.ok(mapOf("status" to "success"))
+            return ResponseEntity.badRequest().body(mapOf("error" to "User not found for uniqueId: ${request.device_unique}"))
         } catch (e: Exception) {
             e.printStackTrace()
             return ResponseEntity.status(500).body(mapOf("error" to "Failed to register token: ${e.message}"))
