@@ -62,18 +62,27 @@ class GPSService {
   // Запрос разрешений
   async requestPermissions() {
     try {
+      // Запрашиваем foreground разрешения (всегда доступно)
       const { status } = await Location.requestForegroundPermissionsAsync();
-      
+
       if (status !== 'granted') {
         console.log('Foreground location permission denied');
         return false;
       }
 
-      const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
-      
-      if (backgroundStatus.status !== 'granted') {
-        console.log('Background location permission denied');
-        return false;
+      // Пытаемся запросить background разрешения (может не работать в Expo Go)
+      try {
+        const backgroundStatus = await Location.requestBackgroundPermissionsAsync();
+
+        if (backgroundStatus.status !== 'granted') {
+          console.log('Background location permission denied - will use foreground only');
+          // Но это OK - можем работать в foreground режиме
+        } else {
+          console.log('Background location permission granted');
+        }
+      } catch (bgError) {
+        console.log('Background permissions not available (Expo Go limitation) - will use foreground only');
+        // Это нормально для Expo Go
       }
 
       return true;
@@ -87,25 +96,31 @@ class GPSService {
   async startTracking(userId) {
     try {
       this.userId = userId;
-      
+
       const hasPermission = await this.requestPermissions();
       if (!hasPermission) {
         throw new Error('Location permission not granted');
       }
 
-      // Настройка отслеживания в фоне
-      await Location.startLocationUpdatesAsync(GPS_TASK_NAME, {
-        accuracy: Location.Accuracy.BestForNavigation,
-        distanceInterval: 50, // Метры
-        timeInterval: 30000, // 30 секунд
-        deferredUpdatesInterval: 30000,
-        deferredUpdatesDistance: 50,
-        foregroundService: {
-          notificationTitle: 'Отслеживание местоположения',
-          notificationBody: 'Активно',
-          notificationColor: '#007AFF',
-        },
-      });
+      // Пытаемся настроить background tracking (может не работать в Expo Go)
+      try {
+        await Location.startLocationUpdatesAsync(GPS_TASK_NAME, {
+          accuracy: Location.Accuracy.BestForNavigation,
+          distanceInterval: 50, // Метры
+          timeInterval: 30000, // 30 секунд
+          deferredUpdatesInterval: 30000,
+          deferredUpdatesDistance: 50,
+          foregroundService: {
+            notificationTitle: 'Отслеживание местоположения',
+            notificationBody: 'Активно',
+            notificationColor: '#007AFF',
+          },
+        });
+        console.log('Background GPS tracking started');
+      } catch (bgError) {
+        console.log('Background tracking not available (Expo Go limitation) - using foreground only');
+        // Foreground tracking ниже всё равно будет работать
+      }
 
       this.isTracking = true;
       console.log('GPS tracking started for user:', userId);
@@ -113,7 +128,7 @@ class GPSService {
       // Запускаем периодическую синхронизацию
       this.startPeriodicSync();
 
-      // Также слушаем обновления в реальном времени
+      // Слушаем обновления в реальном времени (foreground mode - работает в Expo Go)
       this.locationSubscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
@@ -124,6 +139,8 @@ class GPSService {
           this.sendLocationToTraccar(userId, location);
         }
       );
+
+      console.log('Foreground GPS tracking active');
 
     } catch (error) {
       console.log('Start tracking error:', error);

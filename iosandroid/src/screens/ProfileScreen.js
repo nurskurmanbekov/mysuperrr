@@ -42,21 +42,27 @@ const ProfileScreen = () => {
       setLoading(true);
 
       // Загружаем устройства пользователя
-      const devicesResponse = await deviceAPI.getDeviceByUniqueId(user.name);
+      try {
+        const devicesResponse = await deviceAPI.getDeviceByUniqueId(user.name);
 
-      // 🔍 ДИАГНОСТИКА: Проверяем devices данные
-      console.log('═══════════════════════════════════════════');
-      console.log('🔍 ProfileScreen - DEVICES RESPONSE:');
-      console.log('devicesResponse.data:', JSON.stringify(devicesResponse.data, null, 2));
-      if (devicesResponse.data && devicesResponse.data[0]) {
-        console.log('─────────────────────────────────────────');
-        console.log('First device.disabled type:', typeof devicesResponse.data[0].disabled);
-        console.log('First device.disabled value:', devicesResponse.data[0].disabled);
-      }
-      console.log('═══════════════════════════════════════════');
+        // 🔍 ДИАГНОСТИКА: Проверяем devices данные
+        console.log('═══════════════════════════════════════════');
+        console.log('🔍 ProfileScreen - DEVICES RESPONSE:');
+        console.log('devicesResponse.data:', JSON.stringify(devicesResponse.data, null, 2));
+        if (devicesResponse.data && devicesResponse.data[0]) {
+          console.log('─────────────────────────────────────────');
+          console.log('First device.disabled type:', typeof devicesResponse.data[0].disabled);
+          console.log('First device.disabled value:', devicesResponse.data[0].disabled);
+        }
+        console.log('═══════════════════════════════════════════');
 
-      if (devicesResponse.data) {
-        setDevices(devicesResponse.data);
+        if (devicesResponse.data) {
+          setDevices(devicesResponse.data);
+        }
+      } catch (deviceError) {
+        // Устройство не найдено в Traccar - это нормально для новых пользователей
+        console.log('No device found for user, showing empty device list');
+        setDevices([]);
       }
 
       // Здесь можно добавить загрузку истории проверок
@@ -65,7 +71,7 @@ const ProfileScreen = () => {
 
     } catch (error) {
       console.log('Error loading profile data:', error);
-      Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
+      // Не показываем Alert при отсутствии устройств
     } finally {
       setLoading(false);
     }
