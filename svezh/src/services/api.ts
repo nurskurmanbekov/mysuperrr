@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8083/api';
+// Используем относительный путь для работы с Vite proxy
+// Vite автоматически перенаправит /api/* на http://localhost:8083/api/*
+const API_BASE_URL = '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
