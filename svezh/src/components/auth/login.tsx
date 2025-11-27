@@ -3,11 +3,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login, user } = useAuth();
+  const { login: authLogin, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,9 +20,9 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-    
+
     try {
-      await login(email, password);
+      await authLogin(login, password);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Ошибка входа');
     } finally {
@@ -50,22 +50,24 @@ const Login: React.FC = () => {
           {error && <div className="error-message">{error}</div>}
           
           <div className="form-group">
-            <label>ИНН:</label>
+            <label>Логин:</label>
             <input
               type="text"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="admin_user"
               required
               disabled={loading}
             />
           </div>
-          
+
           <div className="form-group">
             <label>Пароль:</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              placeholder="password123"
               required
               disabled={loading}
             />
