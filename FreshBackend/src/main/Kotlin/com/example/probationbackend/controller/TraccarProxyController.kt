@@ -106,7 +106,7 @@ class TraccarProxyController(
                 getUrl,
                 HttpMethod.GET,
                 HttpEntity<String>(headers),
-                Array<Map<String, Any>>::class.java
+                object : org.springframework.core.ParameterizedTypeReference<List<Map<String, Any>>>() {}
             )
 
             val devices = getResponse.body

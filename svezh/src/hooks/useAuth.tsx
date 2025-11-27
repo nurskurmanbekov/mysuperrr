@@ -5,7 +5,7 @@ import React from 'react';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (login: string, password: string) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -45,10 +45,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setLoading(false);
   };
 
-  const login = async (email: string, password: string) => {
-    const response = await authAPI.login(email, password);
+  const login = async (login: string, password: string) => {
+    const response = await authAPI.login(login, password);
     const { token, user } = response.data;
-    
+
     localStorage.setItem('authToken', token);
     setUser(user);
     // Редирект будет происходить через изменение состояния user
