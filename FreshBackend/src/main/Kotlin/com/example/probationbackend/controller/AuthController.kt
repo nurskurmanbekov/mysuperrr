@@ -17,7 +17,7 @@ class AuthController(
 
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<*> {
-        val user = authService.authenticate(request.email, request.password)
+        val user = authService.authenticate(request.login, request.password)
         return if (user != null) {
             val rbacAttributes = authService.getUserRbacAttributes(user)
             val userResponse = mapOf(
@@ -86,9 +86,9 @@ class AuthController(
     }
 }
 
-// DTO остаются без изменений
+// DTO для запроса логина
 data class LoginRequest(
-    val email: String,
+    val login: String,  // Изменено с email на login для соответствия фронтенду
     val password: String
 )
 
