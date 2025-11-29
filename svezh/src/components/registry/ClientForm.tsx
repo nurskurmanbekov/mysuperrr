@@ -37,19 +37,37 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
   });
   const [photo, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
 
     try {
       const formDataToSend = new FormData();
-      
-      // Добавляем данные формы
-      const requestData = {
+
+      // Добавляем данные формы, исключая пустые даты
+      const requestData: any = {
         ...formData,
-        noInn: formData.noInn || undefined
+        // Если noInn отмечен, отправляем пустую строку для inn
+        inn: formData.noInn ? '' : formData.inn,
+        noInn: formData.noInn || undefined,
+        // Удаляем пустые даты (иначе backend не сможет их распарсить)
+        birthDate: formData.birthDate || null,
+        obsStart: formData.obsStart || null,
+        obsEnd: formData.obsEnd || null
       };
+
+      // Удаляем null значения
+      Object.keys(requestData).forEach(key => {
+        if (requestData[key] === null || requestData[key] === '') {
+          if (!['inn', 'noInn', 'birthDate', 'obsStart', 'obsEnd'].includes(key)) {
+            delete requestData[key];
+          }
+        }
+      });
+
       formDataToSend.append('request', new Blob([JSON.stringify(requestData)], {
         type: 'application/json'
       }));
@@ -61,8 +79,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
 
       await registryAPI.createClient(formDataToSend);
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Ошибка создания клиента:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Ошибка при создании клиента. Проверьте данные.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -85,6 +105,20 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="client-form">
+          {error && (
+            <div className="error-message" style={{
+              background: '#dc2626',
+              color: 'white',
+              padding: '15px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              fontWeight: '600',
+              border: '2px solid #ef4444'
+            }}>
+              ⚠️ {error}
+            </div>
+          )}
+
           <div className="form-row">
             <div className="form-group">
               <label>Фамилия *</label>
