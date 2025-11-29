@@ -89,7 +89,7 @@ data class DevicePosition(
 
     /**
      * Статус: online/offline
-     * Считается online если последние данные не старше 5 минут
+     * Считается online если последние данные не старше 30 секунд
      */
     @Column(nullable = false, length = 20)
     val status: String = "online",
@@ -108,9 +108,10 @@ data class DevicePosition(
 ) {
     /**
      * Вычисляем статус на основе времени последнего обновления
+     * Считается online если последнее обновление было не более 30 секунд назад
      */
     fun isOnline(): Boolean {
-        val fiveMinutesAgo = LocalDateTime.now().minusMinutes(5)
-        return serverTime.isAfter(fiveMinutesAgo)
+        val thirtySecondsAgo = LocalDateTime.now().minusSeconds(30)
+        return serverTime.isAfter(thirtySecondsAgo)
     }
 }
