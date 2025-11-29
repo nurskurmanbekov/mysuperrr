@@ -88,13 +88,13 @@ const RealMap: React.FC = () => {
       const clientsWithPositions = clientsData.map((client: any) => {
         const position = positionsMap.get(client.uniqueId || client.inn);
 
-        // Определяем статус: online если позиция обновлялась < 30 секунд назад
+        // Определяем статус: online если позиция обновлялась < 5 минут назад
         let status = 'offline';
         if (position && position.serverTime) {
           const lastUpdate = new Date(position.serverTime);
           const now = new Date();
-          const diffSeconds = (now.getTime() - lastUpdate.getTime()) / 1000;
-          status = diffSeconds < 30 ? 'online' : 'offline'; // 30 секунд вместо 5 минут
+          const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+          status = diffMinutes < 5 ? 'online' : 'offline';
         }
 
         return {
