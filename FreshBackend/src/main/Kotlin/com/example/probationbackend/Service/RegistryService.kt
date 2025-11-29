@@ -27,12 +27,20 @@ class RegistryService(
         // 2. Хешируем пароль для приложения
         val encodedAppPassword = passwordEncoder.encode(request.appPassword)
 
-        // 3. Сохраняем клиента (осуждённого) в БД
+        // 3. Генерируем uniqueId для GPS трекинга (используем ИНН если есть)
+        val uniqueId = if (request.noInn != true && request.inn != null) {
+            request.inn // Используем ИНН как uniqueId для GPS трекинга
+        } else {
+            generateIdentifier() // Если нет ИНН, генерируем случайный ID
+        }
+
+        // 4. Сохраняем клиента (осуждённого) в БД
         val client = Client(
             fio = request.fio,
-            inn = if (request.noInn != true) request.inn else null, // ИСПРАВЛЕНО: request.inn может быть null
-            identifier = generateIdentifier(), // ИСПРАВЛЕНО: создаем идентификатор
-            unit = request.unit ?: "Не указано", // ИСПРАВЛЕНО: значение по умолчанию
+            uniqueId = uniqueId, // КРИТИЧЕСКИ ВАЖНО: uniqueId для GPS трекинга
+            inn = if (request.noInn != true) request.inn else null,
+            identifier = generateIdentifier(), // Идентификатор для внутреннего использования
+            unit = request.unit ?: "Не указано",
             obsType = request.obsType,
             birthDate = request.birthDate,
             sex = request.sex,
@@ -58,10 +66,10 @@ class RegistryService(
         val savedClient = clientRepository.save(client)
 
         var photoKey: String? = null
-        // 4. Если пришло эталонное фото, сохраняем его
+        // 5. Если пришло эталонное фото, сохраняем его
         if (photoFile != null && !photoFile.isEmpty) {
-            // Используем ИНН как ключ для фото (или client.id если ИНН нет)
-            val photoFileName = request.inn ?: "client_${savedClient.id}"
+            // Используем uniqueId как ключ для фото
+            val photoFileName = savedClient.uniqueId ?: "client_${savedClient.id}"
             photoKey = photoStorageService.storePhoto(photoFile, photoFileName, "reference_faces")
             if (photoKey != null) {
                 // Обновляем клиента с ключом фото
@@ -70,13 +78,12 @@ class RegistryService(
             }
         }
 
-        // 5. Если ИНН указан, создаём пользователя и устройство в Traccar
+        // 6. Если ИНН указан, создаём пользователя и устройство в Traccar
         if (request.noInn != true && request.inn != null) {
             val mruIdForUser = request.unit
-            val uniqueId = request.inn
             try {
                 val user = authService.createUser(request.inn, request.appPassword, uniqueId,  userType = "probationer",  mruId = mruIdForUser )
-                // 6. Создаём устройство в Traccar
+                // 7. Создаём устройство в Traccar
                 traccarService.createDevice(uniqueId, request.fio)
             } catch (e: Exception) {
                 // Логируем ошибку, но не прерываем создание клиента
