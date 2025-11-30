@@ -20,7 +20,7 @@ class RegistryService(
 
     fun createClient(request: RegistryCreateRequest, photoFile: MultipartFile? = null): Client {
         // 1. Проверяем, существует ли уже клиент с таким ИНН
-        if (request.noInn != true && request.inn != null && clientRepository.findByInn(request.inn).isPresent) {
+        if (request.noInn != true && !request.inn.isNullOrBlank() && clientRepository.findByInn(request.inn).isPresent) {
             throw IllegalArgumentException("Client with INN ${request.inn} already exists")
         }
 
@@ -28,7 +28,7 @@ class RegistryService(
         val encodedAppPassword = passwordEncoder.encode(request.appPassword)
 
         // 3. Генерируем uniqueId для GPS трекинга (используем ИНН если есть)
-        val uniqueId = if (request.noInn != true && request.inn != null) {
+        val uniqueId = if (request.noInn != true && !request.inn.isNullOrBlank()) {
             request.inn // Используем ИНН как uniqueId для GPS трекинга
         } else {
             generateIdentifier() // Если нет ИНН, генерируем случайный ID
@@ -79,7 +79,7 @@ class RegistryService(
         }
 
         // 6. Если ИНН указан, создаём пользователя и устройство в Traccar
-        if (request.noInn != true && request.inn != null) {
+        if (request.noInn != true && !request.inn.isNullOrBlank()) {
             val mruIdForUser = request.unit
             try {
                 val user = authService.createUser(request.inn, request.appPassword, uniqueId,  userType = "probationer",  mruId = mruIdForUser )

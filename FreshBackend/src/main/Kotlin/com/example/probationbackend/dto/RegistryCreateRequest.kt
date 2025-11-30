@@ -3,12 +3,12 @@ package com.example.probationbackend.dto
 import java.time.LocalDate
 
 data class RegistryCreateRequest(
-    val inn: String,
+    val inn: String? = null, // Может быть пустым если noInn = true
     val noInn: Boolean? = null, // если создают без ИНН
     val lastName: String,
     val firstName: String,
     val middleName: String? = null,
-    val birthDate: LocalDate,
+    val birthDate: LocalDate? = null, // Может быть пустым
     val sex: String? = null, // 'М' или 'Ж'
     val passport: String? = null,
     val regAddress: String? = null,
@@ -34,5 +34,5 @@ data class RegistryCreateRequest(
 
     // Вычисляемое поле для удобства
     val fio: String
-        get() = listOfNotNull(firstName, middleName, lastName).joinToString(" ")
+        get() = listOfNotNull(lastName, firstName, middleName).joinToString(" ")
 }
