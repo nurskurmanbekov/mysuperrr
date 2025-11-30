@@ -5,7 +5,7 @@ package com.example.probationbackend.controller
 import com.example.probationbackend.dto.RegistryCreateRequest
 import com.example.probationbackend.model.User
 import com.example.probationbackend.repository.UserRepository
-import com.example.probationbackend.Service.JwtTokenProvider
+import com.example.probationbackend.service.JwtTokenProvider
 import com.example.probationbackend.service.RegistryService
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
