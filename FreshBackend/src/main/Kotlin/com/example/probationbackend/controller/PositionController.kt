@@ -1,5 +1,6 @@
 package com.example.probationbackend.controller
 
+import com.example.probationbackend.repository.ClientRepository
 import com.example.probationbackend.repository.DevicePositionRepository
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -13,11 +14,13 @@ import java.time.LocalDateTime
  * GET /api/positions/latest - последние позиции всех устройств
  * GET /api/positions/{uniqueId}/latest - последняя позиция конкретного устройства
  * GET /api/positions/{uniqueId}/history - история позиций устройства
+ * GET /api/positions/track/{clientId} - трек для воспроизведения (TrackPlayback)
  */
 @RestController
 @RequestMapping("/api/positions")
 class PositionController(
-    private val devicePositionRepository: DevicePositionRepository
+    private val devicePositionRepository: DevicePositionRepository,
+    private val clientRepository: ClientRepository
 ) {
 
     /**
@@ -192,5 +195,76 @@ class PositionController(
             "count" to onlinePositions.size,
             "devices" to positionsData
         ))
+    }
+
+    /**
+     * Получить трек для воспроизведения (используется в TrackPlayback)
+     * Принимает clientId (число) и возвращает массив позиций для анимации
+     *
+     * GET /api/positions/track/{clientId}?startTime=2025-11-28T07:26&endTime=2025-11-29T07:26
+     *
+     * Response: Array<Position>
+     * [
+     *   {
+     *     "id": 1,
+     *     "latitude": 42.88,
+     *     "longitude": 74.68,
+     *     "altitude": 800.0,
+     *     "speed": 5.5,
+     *     "accuracy": 10.0,
+     *     "timestamp": "2025-11-28T12:00:00"
+     *   },
+     *   ...
+     * ]
+     */
+    @GetMapping("/track/{clientId}")
+    fun getTrack(
+        @PathVariable clientId: Long,
+        @RequestParam(required = true) startTime: String,
+        @RequestParam(required = true) endTime: String
+    ): ResponseEntity<*> {
+        try {
+            // 1. Найти клиента по ID
+            val client = clientRepository.findById(clientId).orElse(null)
+                ?: return ResponseEntity.status(404).body(
+                    mapOf("error" to "Client not found with id: $clientId")
+                )
+
+            // 2. Получить uniqueId клиента
+            val uniqueId = client.uniqueId
+                ?: return ResponseEntity.status(404).body(
+                    mapOf("error" to "Client $clientId has no uniqueId (GPS tracking not enabled)")
+                )
+
+            // 3. Парсинг дат (формат: 2025-11-28T07:26)
+            val startDateTime = LocalDateTime.parse(startTime)
+            val endDateTime = LocalDateTime.parse(endTime)
+
+            // 4. Получить позиции из базы данных
+            val positions = devicePositionRepository.findByUniqueIdAndTimestampBetweenOrderByTimestampDesc(
+                uniqueId, startDateTime, endDateTime
+            )
+
+            // 5. Преобразовать в формат для TrackPlayback (отсортировать по времени ASC)
+            val trackData = positions.reversed().map { pos ->
+                mapOf(
+                    "id" to pos.id,
+                    "latitude" to pos.latitude,
+                    "longitude" to pos.longitude,
+                    "altitude" to pos.altitude,
+                    "speed" to pos.speed,
+                    "accuracy" to pos.accuracy,
+                    "timestamp" to pos.timestamp.toString()
+                )
+            }
+
+            return ResponseEntity.ok(trackData)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return ResponseEntity.status(500).body(
+                mapOf("error" to "Failed to load track: ${e.message}")
+            )
+        }
     }
 }

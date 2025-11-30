@@ -21,6 +21,7 @@ import java.time.LocalDateTime
 class FaceCheckService(
     private val faceCheckEventRepository: FaceCheckEventRepository,
     private val userRepository: UserRepository,
+    private val clientRepository: com.example.probationbackend.repository.ClientRepository,
     private val traccarService: TraccarService,
     private val photoStorageService: PhotoStorageService
 ) {
@@ -38,32 +39,57 @@ class FaceCheckService(
     }
 
     fun verifyFace(userId: String, selfieFile: File): FaceVerificationResult {
+        // Сначала ищем в users (администраторы), затем в clients (осуждённые)
         val user = userRepository.findByUniqueId(userId).orElse(null)
+        if (user != null) {
+            // Проверка для администратора
+            val knownFaceResource = photoStorageService.loadPhotoAsResource(user.uniqueId, "reference_faces")
+            if (knownFaceResource == null) {
+                val knownFaceFile = File("./faces", "${user.uniqueId}.jpg")
+                if (!knownFaceFile.exists()) {
+                    return FaceVerificationResult(false, "Нет эталона для этого пользователя", null)
+                }
+                return performVerificationForUser(knownFaceFile, selfieFile, user)
+            } else {
+                val tempKnownFaceFile = File.createTempFile("known_face_", ".jpg")
+                try {
+                    knownFaceResource.inputStream.use { input ->
+                        FileOutputStream(tempKnownFaceFile).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    return performVerificationForUser(tempKnownFaceFile, selfieFile, user)
+                } finally {
+                    tempKnownFaceFile.delete()
+                }
+            }
+        }
+
+        // Если не найден в users, ищем в clients
+        val client = clientRepository.findByUniqueId(userId).orElse(null)
             ?: return FaceVerificationResult(false, "Пользователь не найден", null)
 
-        val knownFaceResource = photoStorageService.loadPhotoAsResource(user.uniqueId, "reference_faces")
+        // Проверка для клиента (осуждённого)
+        // Фото клиента хранится в reference_faces с именем uniqueId.jpg
+        val knownFaceResource = photoStorageService.loadPhotoAsResource("${client.uniqueId}.jpg", "reference_faces")
         if (knownFaceResource == null) {
-            val knownFaceFile = File("./faces", "${user.uniqueId}.jpg")
-            if (!knownFaceFile.exists()) {
-                return FaceVerificationResult(false, "Нет эталона для этого пользователя", null)
-            }
-            return performVerification(knownFaceFile, selfieFile, user)
-        } else {
-            val tempKnownFaceFile = File.createTempFile("known_face_", ".jpg")
-            try {
-                knownFaceResource.inputStream.use { input ->
-                    FileOutputStream(tempKnownFaceFile).use { output ->
-                        input.copyTo(output)
-                    }
+            return FaceVerificationResult(false, "Нет эталонного фото для этого пользователя. Обратитесь к администратору для загрузки фото.", null)
+        }
+
+        val tempKnownFaceFile = File.createTempFile("known_face_", ".jpg")
+        try {
+            knownFaceResource.inputStream.use { input ->
+                FileOutputStream(tempKnownFaceFile).use { output ->
+                    input.copyTo(output)
                 }
-                return performVerification(tempKnownFaceFile, selfieFile, user)
-            } finally {
-                tempKnownFaceFile.delete()
             }
+            return performVerificationForClient(tempKnownFaceFile, selfieFile, client)
+        } finally {
+            tempKnownFaceFile.delete()
         }
     }
 
-    private fun performVerification(knownFaceFile: File, selfieFile: File, user: com.example.probationbackend.model.User): FaceVerificationResult {
+    private fun performVerificationForUser(knownFaceFile: File, selfieFile: File, user: com.example.probationbackend.model.User): FaceVerificationResult {
         try {
             val knownMat = imread(knownFaceFile.absolutePath)
             val selfieMat = imread(selfieFile.absolutePath)
@@ -92,6 +118,58 @@ class FaceCheckService(
 
             val faceCheckEvent = FaceCheckEvent(
                 userId = user.id!!,
+                deviceId = null,
+                outcome = if (match) "ok" else "failed",
+                takenAt = LocalDateTime.now(),
+                distance = distance,
+                checkId = null,
+                deadlineIso = null,
+                appVersion = null
+            )
+            faceCheckEventRepository.save(faceCheckEvent)
+
+            return FaceVerificationResult(match,
+                if (match) "Лицо распознано успешно" else "Лицо не распознано",
+                distance)
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return FaceVerificationResult(false, "Ошибка при обработке изображений: ${e.message}", null)
+        }
+    }
+
+    private fun performVerificationForClient(knownFaceFile: File, selfieFile: File, client: com.example.probationbackend.model.Client): FaceVerificationResult {
+        try {
+            val knownMat = imread(knownFaceFile.absolutePath)
+            val selfieMat = imread(selfieFile.absolutePath)
+
+            if (knownMat.empty() || selfieMat.empty()) {
+                return FaceVerificationResult(false, "Не удалось загрузить изображения", null)
+            }
+
+            val knownFaces = detectFaces(knownMat)
+            val selfieFaces = detectFaces(selfieMat)
+
+            if (knownFaces.size() == 0L || selfieFaces.size() == 0L) {
+                return FaceVerificationResult(false, "Лицо не найдено на фото", null)
+            }
+
+            val knownHistogram = calculateHistogram(knownMat, knownFaces.get(0))
+            val selfieHistogram = calculateHistogram(selfieMat, selfieFaces.get(0))
+            val distance = compareHistograms(knownHistogram, selfieHistogram)
+
+            val tolerance = 0.6
+            val match = distance <= tolerance
+
+            // Обновляем атрибуты Traccar для клиента (если есть uniqueId)
+            if (client.uniqueId != null) {
+                traccarService.updateFaceIdAttributes(client.uniqueId!!, match, distance,
+                    if (match) "Лицо распознано успешно" else "Лицо не распознано")
+            }
+
+            // Сохраняем событие проверки лица
+            val faceCheckEvent = FaceCheckEvent(
+                userId = client.id!!,
                 deviceId = null,
                 outcome = if (match) "ok" else "failed",
                 takenAt = LocalDateTime.now(),
