@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { registryAPI } from '../../services/api';
 import { Client } from '../../types';
 import ClientForm from './ClientForm';
+import { useAuth } from '../../hooks/useAuth';
 
 const Registry: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const { user } = useAuth();
+
+  // Проверка прав доступа: только deptAdmin может редактировать
+  const canEdit = user?.attributes?.role === 'deptAdmin';
 
   useEffect(() => {
     loadClients();
@@ -29,16 +34,26 @@ const Registry: React.FC = () => {
   <div className="registry-page">
     <div className="page-header">
       <h1>Реестр клиентов</h1>
-      <button 
-        onClick={() => setShowForm(true)}
-        className="add-client-btn"
-      >
-        Добавить клиента
-      </button>
+      {canEdit ? (
+        <button
+          onClick={() => setShowForm(true)}
+          className="add-client-btn"
+        >
+          Добавить клиента
+        </button>
+      ) : (
+        <div style={{
+          color: '#94a3b8',
+          fontSize: '14px',
+          fontStyle: 'italic'
+        }}>
+          Только Администратор департамента может добавлять клиентов
+        </div>
+      )}
     </div>
 
-      {showForm && (
-        <ClientForm 
+      {showForm && canEdit && (
+        <ClientForm
           onClose={() => setShowForm(false)}
           onSuccess={() => {
             setShowForm(false);
