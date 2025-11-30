@@ -2,17 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { registryAPI } from '../../services/api';
 import { Client } from '../../types';
 import ClientForm from './ClientForm';
-import { useAuth } from '../../hooks/useAuth';
 
 const Registry: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
-  const { user } = useAuth();
-
-  // Проверка роли: только deptAdmin может редактировать
-  const isDeptAdmin = user?.attributes?.role === 'deptAdmin';
 
   useEffect(() => {
     loadClients();
@@ -64,7 +59,7 @@ const Registry: React.FC = () => {
       </button>
     </div>
 
-      {showForm && (editingClient === null || isDeptAdmin) && (
+      {showForm && (
         <ClientForm
           client={editingClient}
           onClose={() => {
@@ -93,39 +88,37 @@ const Registry: React.FC = () => {
                 className="client-photo"
               />
             )}
-            {isDeptAdmin && (
-              <div className="client-actions">
-                <button
-                  onClick={() => handleEdit(client)}
-                  className="edit-btn"
-                  style={{
-                    marginRight: '10px',
-                    padding: '8px 16px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Редактировать
-                </button>
-                <button
-                  onClick={() => handleDelete(client.id)}
-                  className="delete-btn"
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#ef4444',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Удалить
-                </button>
-              </div>
-            )}
+            <div className="client-actions">
+              <button
+                onClick={() => handleEdit(client)}
+                className="edit-btn"
+                style={{
+                  marginRight: '10px',
+                  padding: '8px 16px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Редактировать
+              </button>
+              <button
+                onClick={() => handleDelete(client.id)}
+                className="delete-btn"
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#ef4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                Удалить
+              </button>
+            </div>
           </div>
         ))}
       </div>
