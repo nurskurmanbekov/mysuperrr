@@ -153,6 +153,28 @@ class RegistryService(
         val client = clientRepository.findById(id).orElseThrow {
             IllegalArgumentException("Client not found with id: $id")
         }
+
+        // Удаляем пользователя из системы, если он существует
+        if (!client.inn.isNullOrBlank()) {
+            try {
+                authService.deleteUserByInn(client.inn)
+                println("User with INN ${client.inn} deleted successfully")
+            } catch (e: Exception) {
+                println("Warning: Failed to delete user for INN ${client.inn}: ${e.message}")
+            }
+        }
+
+        // Удаляем устройство из Traccar, если есть uniqueId
+        if (client.uniqueId != null) {
+            try {
+                traccarService.deleteDeviceByUniqueId(client.uniqueId)
+                println("Traccar device ${client.uniqueId} deleted successfully")
+            } catch (e: Exception) {
+                println("Warning: Failed to delete Traccar device ${client.uniqueId}: ${e.message}")
+            }
+        }
+
+        // Удаляем клиента из БД
         clientRepository.deleteById(id)
     }
 
