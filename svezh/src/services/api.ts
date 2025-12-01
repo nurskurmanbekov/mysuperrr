@@ -22,6 +22,13 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      // 403 Forbidden - пользователь не имеет доступа (например, клиент пытается войти в веб-интерфейс)
+      if (error.response?.data?.error === 'PROBATIONER_WEB_ACCESS_DENIED') {
+        localStorage.removeItem('authToken');
+        window.location.href = '/login';
+        alert('Доступ запрещён. Клиенты могут использовать только мобильное приложение.');
+      }
     }
     return Promise.reject(error);
   }

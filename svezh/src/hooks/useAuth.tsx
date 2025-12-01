@@ -49,6 +49,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const response = await authAPI.login(login, password);
     const { token, user } = response.data;
 
+    // ВАЖНО: Блокируем клиентов (probationers) от входа в веб-интерфейс
+    if (user.attributes?.role === 'probationer') {
+      throw new Error('Доступ запрещён. Клиенты могут использовать только мобильное приложение.');
+    }
+
     localStorage.setItem('authToken', token);
     setUser(user);
     // Редирект будет происходить через изменение состояния user

@@ -123,8 +123,18 @@ class FaceCheckService(
             val selfieHistogram = calculateHistogram(selfieMat, selfieFaces.get(0))
             val distance = compareHistograms(knownHistogram, selfieHistogram)
 
-            val tolerance = 0.6
+            // ВАЖНО: Уменьшен порог для более строгой верификации
+            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
+            val tolerance = 0.35  // Было 0.6 - слишком слабая верификация
             val match = distance <= tolerance
+
+            println("═══════════════════════════════════════════")
+            println("🔍 FACE ID VERIFICATION (User)")
+            println("User ID: ${user.uniqueId}")
+            println("Distance: %.4f".format(distance))
+            println("Tolerance: $tolerance")
+            println("Result: ${if (match) "✅ MATCH" else "❌ NO MATCH"}")
+            println("═══════════════════════════════════════════")
 
             traccarService.updateFaceIdAttributes(user.uniqueId, match, distance,
                 if (match) "Лицо распознано успешно" else "Лицо не распознано")
@@ -171,8 +181,18 @@ class FaceCheckService(
             val selfieHistogram = calculateHistogram(selfieMat, selfieFaces.get(0))
             val distance = compareHistograms(knownHistogram, selfieHistogram)
 
-            val tolerance = 0.6
+            // ВАЖНО: Уменьшен порог для более строгой верификации
+            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
+            val tolerance = 0.35  // Было 0.6 - слишком слабая верификация
             val match = distance <= tolerance
+
+            println("═══════════════════════════════════════════")
+            println("🔍 FACE ID VERIFICATION (Client)")
+            println("Client ID: ${client.id}, INN: ${client.inn}, uniqueId: ${client.uniqueId}")
+            println("Distance: %.4f".format(distance))
+            println("Tolerance: $tolerance")
+            println("Result: ${if (match) "✅ MATCH" else "❌ NO MATCH"}")
+            println("═══════════════════════════════════════════")
 
             // Обновляем атрибуты Traccar для клиента (если есть uniqueId)
             if (client.uniqueId != null) {
