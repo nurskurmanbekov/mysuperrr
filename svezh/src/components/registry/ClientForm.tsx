@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { registryAPI } from '../../services/api';
+import { Client } from '../../types';
 
 interface ClientFormProps {
+  client?: Client | null;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
+const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) => {
+  const isEditMode = !!client;
+
   const [formData, setFormData] = useState({
     inn: '',
     noInn: false,
@@ -39,6 +43,46 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
 
+  // Загружаем данные клиента при редактировании
+  useEffect(() => {
+    if (client) {
+      // Разбиваем ФИО на части
+      const nameParts = client.fio.split(' ');
+      const lastName = nameParts[0] || '';
+      const firstName = nameParts[1] || '';
+      const middleName = nameParts[2] || '';
+
+      setFormData({
+        inn: client.inn || '',
+        noInn: !client.inn,
+        lastName,
+        firstName,
+        middleName,
+        birthDate: client.birthDate || '',
+        sex: client.sex || '',
+        passport: client.passport || '',
+        regAddress: client.regAddress || '',
+        factAddress: client.factAddress || '',
+        contact1: client.contact1 || '',
+        contact2: client.contact2 || '',
+        erpNumber: client.erpNumber || '',
+        obsStart: client.obsStart || '',
+        obsEnd: client.obsEnd || '',
+        obsType: client.obsType || 'Электронный надзор',
+        degree: client.degree || '',
+        udNumber: client.udNumber || '',
+        code: client.code || '',
+        article: client.article || '',
+        part: client.part || '',
+        point: client.point || '',
+        extraInfo: client.extraInfo || '',
+        measures: client.measures || '',
+        appPassword: '', // Не показываем старый пароль
+        unit: client.unit || ''
+      });
+    }
+  }, [client]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -59,6 +103,11 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
         obsEnd: formData.obsEnd || null
       };
 
+      // При редактировании не требуем пароль если он пустой
+      if (isEditMode && !formData.appPassword) {
+        delete requestData.appPassword;
+      }
+
       // Удаляем null значения
       Object.keys(requestData).forEach(key => {
         if (requestData[key] === null || requestData[key] === '') {
@@ -77,11 +126,17 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
         formDataToSend.append('photo', photo);
       }
 
-      await registryAPI.createClient(formDataToSend);
+      if (isEditMode && client) {
+        await registryAPI.updateClient(client.id, formDataToSend);
+      } else {
+        await registryAPI.createClient(formDataToSend);
+      }
+
       onSuccess();
     } catch (error: any) {
-      console.error('Ошибка создания клиента:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Ошибка при создании клиента. Проверьте данные.';
+      console.error(isEditMode ? 'Ошибка обновления клиента:' : 'Ошибка создания клиента:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message ||
+        (isEditMode ? 'Ошибка при обновлении клиента. Проверьте данные.' : 'Ошибка при создании клиента. Проверьте данные.');
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -100,7 +155,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
     <div className="modal-overlay">
       <div className="modal-content">
         <div className="modal-header">
-          <h2>Добавить клиента</h2>
+          <h2>{isEditMode ? 'Редактировать клиента' : 'Добавить клиента'}</h2>
           <button onClick={onClose} className="close-button">×</button>
         </div>
 
@@ -228,18 +283,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
           </div>
 
           <div className="form-group">
-            <label>Пароль для приложения *</label>
+            <label>Пароль для приложения {isEditMode && '(оставьте пустым, чтобы не менять)'}{!isEditMode && '*'}</label>
             <input
               type="password"
               name="appPassword"
               value={formData.appPassword}
               onChange={handleChange}
-              required
+              required={!isEditMode}
             />
           </div>
 
           <div className="form-group">
-            <label>Эталонное фото</label>
+            <label>Эталонное фото {isEditMode && '(загрузите новое, чтобы заменить)'}</label>
             <input
               type="file"
               accept="image/*"
@@ -252,7 +307,10 @@ const ClientForm: React.FC<ClientFormProps> = ({ onClose, onSuccess }) => {
               Отмена
             </button>
             <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? 'Создание...' : 'Создать клиента'}
+              {loading
+                ? (isEditMode ? 'Сохранение...' : 'Создание...')
+                : (isEditMode ? 'Сохранить изменения' : 'Создать клиента')
+              }
             </button>
           </div>
         </form>

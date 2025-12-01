@@ -70,10 +70,16 @@ class FaceCheckService(
             ?: return FaceVerificationResult(false, "Пользователь не найден", null)
 
         // Проверка для клиента (осуждённого)
-        // Фото клиента хранится в reference_faces с именем uniqueId.jpg
-        val knownFaceResource = photoStorageService.loadPhotoAsResource("${client.uniqueId}.jpg", "reference_faces")
-        if (knownFaceResource == null) {
+        // Используем photoKey из клиента для поиска эталонного фото
+        if (client.photoKey.isNullOrBlank()) {
             return FaceVerificationResult(false, "Нет эталонного фото для этого пользователя. Обратитесь к администратору для загрузки фото.", null)
+        }
+
+        // photoKey имеет формат "reference_faces/filename.ext", нам нужен только filename.ext
+        val photoFileName = client.photoKey!!.substringAfterLast('/')
+        val knownFaceResource = photoStorageService.loadPhotoAsResource(photoFileName, "reference_faces")
+        if (knownFaceResource == null) {
+            return FaceVerificationResult(false, "Не удалось загрузить эталонное фото. Обратитесь к администратору.", null)
         }
 
         val tempKnownFaceFile = File.createTempFile("known_face_", ".jpg")

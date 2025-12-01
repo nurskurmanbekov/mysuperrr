@@ -15,7 +15,8 @@ class RegistryService(
     private val authService: AuthService,
     private val passwordEncoder: PasswordEncoder,
     private val traccarService: TraccarService,
-    private val photoStorageService: PhotoStorageService
+    private val photoStorageService: PhotoStorageService,
+    private val districtRepository: com.example.probationbackend.repository.DistrictRepository
 ) {
 
     fun createClient(request: RegistryCreateRequest, photoFile: MultipartFile? = null): Client {
@@ -33,6 +34,13 @@ class RegistryService(
         } else {
             generateIdentifier() // Если нет ИНН, генерируем случайный ID
         }
+
+        // 3.5. Находим район по названию unit (если указан)
+        val district = if (!request.unit.isNullOrBlank()) {
+            districtRepository.findAll().firstOrNull {
+                it.name.equals(request.unit, ignoreCase = true)
+            }
+        } else null
 
         // 4. Сохраняем клиента (осуждённого) в БД
         val client = Client(
@@ -61,7 +69,8 @@ class RegistryService(
             extraInfo = request.extraInfo,
             measures = request.measures,
             appPassword = encodedAppPassword,
-            photoKey = null
+            photoKey = null,
+            district = district // Устанавливаем район
         )
         val savedClient = clientRepository.save(client)
 
@@ -120,6 +129,13 @@ class RegistryService(
             photoKey = photoStorageService.storePhoto(photoFile, photoFileName, "reference_faces")
         }
 
+        // Находим район по названию unit (если указан и изменился)
+        val district = if (!request.unit.isNullOrBlank()) {
+            districtRepository.findAll().firstOrNull {
+                it.name.equals(request.unit, ignoreCase = true)
+            }
+        } else existingClient.district
+
         val updatedClient = existingClient.copy(
             fio = request.fio,
             inn = if (request.noInn != true) request.inn else null,
@@ -143,7 +159,8 @@ class RegistryService(
             udNumber = request.udNumber,
             erpNumber = request.erpNumber,
             sex = request.sex,
-            extraInfo = request.extraInfo
+            extraInfo = request.extraInfo,
+            district = district // Обновляем район
         )
 
         return clientRepository.save(updatedClient)
@@ -153,6 +170,28 @@ class RegistryService(
         val client = clientRepository.findById(id).orElseThrow {
             IllegalArgumentException("Client not found with id: $id")
         }
+
+        // Удаляем пользователя из системы, если он существует
+        if (!client.inn.isNullOrBlank()) {
+            try {
+                authService.deleteUserByInn(client.inn)
+                println("User with INN ${client.inn} deleted successfully")
+            } catch (e: Exception) {
+                println("Warning: Failed to delete user for INN ${client.inn}: ${e.message}")
+            }
+        }
+
+        // Удаляем устройство из Traccar, если есть uniqueId
+        if (client.uniqueId != null) {
+            try {
+                traccarService.deleteDeviceByUniqueId(client.uniqueId)
+                println("Traccar device ${client.uniqueId} deleted successfully")
+            } catch (e: Exception) {
+                println("Warning: Failed to delete Traccar device ${client.uniqueId}: ${e.message}")
+            }
+        }
+
+        // Удаляем клиента из БД
         clientRepository.deleteById(id)
     }
 

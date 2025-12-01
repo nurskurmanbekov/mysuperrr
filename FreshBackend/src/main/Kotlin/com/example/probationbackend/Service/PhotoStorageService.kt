@@ -25,19 +25,34 @@ class PhotoStorageService(
             return null
         }
 
-        val targetDir = if (subDir != null) File(storageDir, subDir) else File(storageDir)
+        // Используем абсолютный путь для надёжности
+        val baseDir = File(storageDir).absoluteFile
+        val targetDir = if (subDir != null) File(baseDir, subDir) else baseDir
+
+        // Создаём директорию если не существует
         if (!targetDir.exists()) {
-            targetDir.mkdirs()
+            val created = targetDir.mkdirs()
+            if (!created && !targetDir.exists()) {
+                println("ERROR: Failed to create directory: ${targetDir.absolutePath}")
+                return null
+            }
         }
 
         val fileName = "$key.${getExtension(file.originalFilename)}"
-        val filePath = File(targetDir, fileName)
+        val filePath = File(targetDir, fileName).absoluteFile
 
         try {
-            file.transferTo(filePath)
+            // Используем более надёжный способ записи файла
+            file.inputStream.use { input ->
+                filePath.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+            println("Photo saved successfully: ${filePath.absolutePath}")
             // Возвращаем относительный путь или ключ для доступа
             return if (subDir != null) "$subDir/$fileName" else fileName
         } catch (e: IOException) {
+            println("ERROR: Failed to save photo to ${filePath.absolutePath}: ${e.message}")
             e.printStackTrace()
             return null
         }
