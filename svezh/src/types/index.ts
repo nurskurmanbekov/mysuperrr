@@ -17,6 +17,24 @@ export interface Client {
   uniqueId: string;
   obsType: string;
   birthDate?: string;
+  age?: number;
+  sex?: string;
+  passport?: string;
+  regAddress?: string;
+  factAddress?: string;
+  contact1?: string;
+  contact2?: string;
+  erpNumber?: string;
+  obsStart?: string;
+  obsEnd?: string;
+  degree?: string;
+  udNumber?: string;
+  code?: string;
+  article?: string;
+  part?: string;
+  point?: string;
+  extraInfo?: string;
+  measures?: string;
   unit?: string;
   photoKey?: string;
 }

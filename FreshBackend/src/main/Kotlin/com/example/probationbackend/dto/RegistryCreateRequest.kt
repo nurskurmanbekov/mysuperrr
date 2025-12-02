@@ -9,6 +9,7 @@ data class RegistryCreateRequest(
     val firstName: String,
     val middleName: String? = null,
     val birthDate: LocalDate? = null, // Может быть пустым
+    val age: Int? = null, // Возраст (вычисляется из birthDate)
     val sex: String? = null, // 'М' или 'Ж'
     val passport: String? = null,
     val regAddress: String? = null,

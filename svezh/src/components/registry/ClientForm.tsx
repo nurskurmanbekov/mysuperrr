@@ -12,22 +12,29 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
   const isEditMode = !!client;
 
   const [formData, setFormData] = useState({
-    inn: '',
-    noInn: false,
+    // Основная информация
     lastName: '',
     firstName: '',
     middleName: '',
-    birthDate: '',
     sex: '',
+    birthDate: '',
+    age: '',
+    inn: '',
+    noInn: false,
     passport: '',
+    // Адреса
     regAddress: '',
     factAddress: '',
+    // Контакты
     contact1: '',
     contact2: '',
-    erpNumber: '',
+    // Надзор
+    obsType: 'Электронный надзор',
     obsStart: '',
     obsEnd: '',
-    obsType: 'Электронный надзор',
+    unit: '',
+    // Дополнительные поля надзора
+    erpNumber: '',
     degree: '',
     udNumber: '',
     code: '',
@@ -36,12 +43,25 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
     point: '',
     extraInfo: '',
     measures: '',
-    appPassword: '',
-    unit: ''
+    // Доступ
+    appPassword: ''
   });
   const [photo, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
+
+  // Вычисляем возраст из даты рождения
+  const calculateAge = (birthDate: string): number => {
+    if (!birthDate) return 0;
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   // Загружаем данные клиента при редактировании
   useEffect(() => {
@@ -53,22 +73,24 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
       const middleName = nameParts[2] || '';
 
       setFormData({
-        inn: client.inn || '',
-        noInn: !client.inn,
         lastName,
         firstName,
         middleName,
-        birthDate: client.birthDate || '',
         sex: client.sex || '',
+        birthDate: client.birthDate || '',
+        age: client.age?.toString() || '',
+        inn: client.inn || '',
+        noInn: !client.inn,
         passport: client.passport || '',
         regAddress: client.regAddress || '',
         factAddress: client.factAddress || '',
         contact1: client.contact1 || '',
         contact2: client.contact2 || '',
-        erpNumber: client.erpNumber || '',
+        obsType: client.obsType || 'Электронный надзор',
         obsStart: client.obsStart || '',
         obsEnd: client.obsEnd || '',
-        obsType: client.obsType || 'Электронный надзор',
+        unit: client.unit || '',
+        erpNumber: client.erpNumber || '',
         degree: client.degree || '',
         udNumber: client.udNumber || '',
         code: client.code || '',
@@ -77,8 +99,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         point: client.point || '',
         extraInfo: client.extraInfo || '',
         measures: client.measures || '',
-        appPassword: '', // Не показываем старый пароль
-        unit: client.unit || ''
+        appPassword: '' // Не показываем старый пароль
       });
     }
   }, [client]);
@@ -91,9 +112,13 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
     try {
       const formDataToSend = new FormData();
 
+      // Вычисляем возраст если указана дата рождения
+      const ageValue = formData.birthDate ? calculateAge(formData.birthDate) : null;
+
       // Добавляем данные формы, исключая пустые даты
       const requestData: any = {
         ...formData,
+        age: ageValue, // Автоматически вычисленный возраст
         // Если noInn отмечен, отправляем пустую строку для inn
         inn: formData.noInn ? '' : formData.inn,
         noInn: formData.noInn || undefined,
@@ -111,7 +136,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
       // Удаляем null значения
       Object.keys(requestData).forEach(key => {
         if (requestData[key] === null || requestData[key] === '') {
-          if (!['inn', 'noInn', 'birthDate', 'obsStart', 'obsEnd'].includes(key)) {
+          if (!['inn', 'noInn', 'birthDate', 'obsStart', 'obsEnd', 'age'].includes(key)) {
             delete requestData[key];
           }
         }
@@ -145,10 +170,21 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-    }));
+    const newValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+
+    setFormData(prev => {
+      const updated = {
+        ...prev,
+        [name]: newValue
+      };
+
+      // Автоматически обновляем возраст при изменении даты рождения
+      if (name === 'birthDate' && value) {
+        updated.age = calculateAge(value).toString();
+      }
+
+      return updated;
+    });
   };
 
   return (
@@ -174,132 +210,262 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           )}
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Фамилия *</label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
+          {/* 1. ОСНОВНАЯ ИНФОРМАЦИЯ */}
+          <div className="form-section">
+            <h3>Основная информация</h3>
 
-            <div className="form-group">
-              <label>Имя *</label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Отчество</label>
-              <input
-                type="text"
-                name="middleName"
-                value={formData.middleName}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>ИНН</label>
-              <input
-                type="text"
-                name="inn"
-                value={formData.inn}
-                onChange={handleChange}
-                disabled={formData.noInn}
-              />
-            </div>
-
-            <div className="form-group checkbox-group">
-              <label>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Фамилия *</label>
                 <input
-                  type="checkbox"
-                  name="noInn"
-                  checked={formData.noInn}
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Имя *</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Отчество</label>
+                <input
+                  type="text"
+                  name="middleName"
+                  value={formData.middleName}
                   onChange={handleChange}
                 />
-                Без ИНН
-              </label>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Пол</label>
+                <select
+                  name="sex"
+                  value={formData.sex}
+                  onChange={handleChange}
+                >
+                  <option value="">Выберите</option>
+                  <option value="М">Мужской</option>
+                  <option value="Ж">Женский</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Дата рождения</label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  value={formData.birthDate}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Возраст</label>
+                <input
+                  type="number"
+                  name="age"
+                  value={formData.age}
+                  readOnly
+                  disabled
+                  style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                  title="Вычисляется автоматически из даты рождения"
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>ИНН</label>
+                <input
+                  type="text"
+                  name="inn"
+                  value={formData.inn}
+                  onChange={handleChange}
+                  disabled={formData.noInn}
+                />
+              </div>
+
+              <div className="form-group checkbox-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="noInn"
+                    checked={formData.noInn}
+                    onChange={handleChange}
+                  />
+                  Без ИНН
+                </label>
+              </div>
+
+              <div className="form-group">
+                <label>Паспорт</label>
+                <input
+                  type="text"
+                  name="passport"
+                  value={formData.passport}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. АДРЕСА */}
+          <div className="form-section">
+            <h3>Адреса</h3>
+
+            <div className="form-group">
+              <label>Адрес регистрации</label>
+              <input
+                type="text"
+                name="regAddress"
+                value={formData.regAddress}
+                onChange={handleChange}
+              />
             </div>
 
             <div className="form-group">
-              <label>Дата рождения</label>
+              <label>Фактический адрес</label>
               <input
-                type="date"
-                name="birthDate"
-                value={formData.birthDate}
+                type="text"
+                name="factAddress"
+                value={formData.factAddress}
                 onChange={handleChange}
               />
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label>Тип надзора *</label>
-              <select
-                name="obsType"
-                value={formData.obsType}
-                onChange={handleChange}
-                required
-              >
-                <option value="Электронный надзор">Электронный надзор</option>
-                <option value="Мобильное приложение">Мобильное приложение</option>
-                <option value="Иное">Иное</option>
-              </select>
+          {/* 3. КОНТАКТЫ */}
+          <div className="form-section">
+            <h3>Контакты</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Телефон</label>
+                <input
+                  type="text"
+                  name="contact1"
+                  value={formData.contact1}
+                  onChange={handleChange}
+                  placeholder="+996 XXX XXX XXX"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Экстренный контакт</label>
+                <input
+                  type="text"
+                  name="contact2"
+                  value={formData.contact2}
+                  onChange={handleChange}
+                  placeholder="+996 XXX XXX XXX"
+                />
+              </div>
             </div>
+          </div>
+
+          {/* 4. НАДЗОР */}
+          <div className="form-section">
+            <h3>Надзор</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Тип надзора *</label>
+                <select
+                  name="obsType"
+                  value={formData.obsType}
+                  onChange={handleChange}
+                  required
+                >
+                  <option value="Электронный надзор">Электронный надзор</option>
+                  <option value="Мобильное приложение">Мобильное приложение</option>
+                  <option value="Иное">Иное</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Дата начала надзора</label>
+                <input
+                  type="date"
+                  name="obsStart"
+                  value={formData.obsStart}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Дата окончания надзора</label>
+                <input
+                  type="date"
+                  name="obsEnd"
+                  value={formData.obsEnd}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 5. ПОДРАЗДЕЛЕНИЕ */}
+          <div className="form-section">
+            <h3>Подразделение</h3>
 
             <div className="form-group">
-              <label>Пол</label>
-              <select
-                name="sex"
-                value={formData.sex}
-                onChange={handleChange}
-              >
-                <option value="">Выберите</option>
-                <option value="М">Мужской</option>
-                <option value="Ж">Женский</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Подразделение</label>
+              <label>Район (Подразделение)</label>
               <input
                 type="text"
                 name="unit"
                 value={formData.unit}
                 onChange={handleChange}
+                placeholder="Например: Центральный район"
               />
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Пароль для приложения {isEditMode && '(оставьте пустым, чтобы не менять)'}{!isEditMode && '*'}</label>
-            <input
-              type="password"
-              name="appPassword"
-              value={formData.appPassword}
-              onChange={handleChange}
-              required={!isEditMode}
-            />
+          {/* 6. ДОСТУП */}
+          <div className="form-section">
+            <h3>Доступ</h3>
+
+            <div className="form-group">
+              <label>Пароль для приложения {isEditMode && '(оставьте пустым, чтобы не менять)'}{!isEditMode && '*'}</label>
+              <input
+                type="password"
+                name="appPassword"
+                value={formData.appPassword}
+                onChange={handleChange}
+                required={!isEditMode}
+              />
+            </div>
           </div>
 
-          <div className="form-group">
-            <label>Эталонное фото {isEditMode && '(загрузите новое, чтобы заменить)'}</label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-            />
+          {/* 7. ЛИЦО */}
+          <div className="form-section">
+            <h3>Эталонное фото для Face ID</h3>
+
+            <div className="form-group">
+              <label>Эталонное фото {isEditMode && '(загрузите новое, чтобы заменить)'}</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+              />
+              {!isEditMode && (
+                <small style={{ display: 'block', marginTop: '5px', color: '#6b7280' }}>
+                  Рекомендуется загрузить фото для корректной работы Face ID
+                </small>
+              )}
+            </div>
           </div>
 
           <div className="form-actions">

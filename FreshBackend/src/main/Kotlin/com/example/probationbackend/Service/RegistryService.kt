@@ -51,6 +51,7 @@ class RegistryService(
             unit = request.unit ?: "Не указано",
             obsType = request.obsType,
             birthDate = request.birthDate,
+            age = request.age, // Сохраняем возраст
             sex = request.sex,
             passport = request.passport,
             regAddress = request.regAddress,
@@ -141,6 +142,7 @@ class RegistryService(
             inn = if (request.noInn != true) request.inn else null,
             obsType = request.obsType,
             birthDate = request.birthDate,
+            age = request.age, // Обновляем возраст
             unit = request.unit ?: existingClient.unit,
             photoKey = photoKey ?: existingClient.photoKey,
             regAddress = request.regAddress,

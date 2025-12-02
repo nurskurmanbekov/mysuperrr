@@ -37,6 +37,9 @@ data class Client(
     @Column(name = "birth_date")
     val birthDate: LocalDate? = null,
 
+    @Column(name = "age")
+    val age: Int? = null, // Возраст (вычисляется из birthDate, но хранится отдельно)
+
     @Column(name = "sex")
     val sex: String? = null, // 'М' или 'Ж'
 
