@@ -29,7 +29,8 @@ data class RegistryCreateRequest(
     val measures: String? = null,
     val appPassword: String, // Пароль для приложения
     val photoKey: String? = null,
-    val unit: String?
+    val unit: String?,
+    val districtId: Long? = null // ID района
 ) {
 
     // Вычисляемое поле для удобства

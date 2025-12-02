@@ -19,6 +19,28 @@ export interface Client {
   birthDate?: string;
   unit?: string;
   photoKey?: string;
+  sex?: string;
+  passport?: string;
+  regAddress?: string;
+  factAddress?: string;
+  contact1?: string;
+  contact2?: string;
+  erpNumber?: string;
+  obsStart?: string;
+  obsEnd?: string;
+  degree?: string;
+  udNumber?: string;
+  code?: string;
+  article?: string;
+  part?: string;
+  point?: string;
+  extraInfo?: string;
+  measures?: string;
+  district?: {
+    id: number;
+    name: string;
+    code: string;
+  };
 }
 
 export interface Device {

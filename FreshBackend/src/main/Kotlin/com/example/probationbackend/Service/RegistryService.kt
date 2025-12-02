@@ -35,12 +35,14 @@ class RegistryService(
             generateIdentifier() // Если нет ИНН, генерируем случайный ID
         }
 
-        // 3.5. Находим район по названию unit (если указан)
-        val district = if (!request.unit.isNullOrBlank()) {
-            districtRepository.findAll().firstOrNull {
+        // 3.5. Находим район по ID или по названию unit (если указан)
+        val district = when {
+            request.districtId != null -> districtRepository.findById(request.districtId).orElse(null)
+            !request.unit.isNullOrBlank() -> districtRepository.findAll().firstOrNull {
                 it.name.equals(request.unit, ignoreCase = true)
             }
-        } else null
+            else -> null
+        }
 
         // 4. Сохраняем клиента (осуждённого) в БД
         val client = Client(
@@ -129,12 +131,14 @@ class RegistryService(
             photoKey = photoStorageService.storePhoto(photoFile, photoFileName, "reference_faces")
         }
 
-        // Находим район по названию unit (если указан и изменился)
-        val district = if (!request.unit.isNullOrBlank()) {
-            districtRepository.findAll().firstOrNull {
+        // Находим район по ID или по названию unit (если указан и изменился)
+        val district = when {
+            request.districtId != null -> districtRepository.findById(request.districtId).orElse(null)
+            !request.unit.isNullOrBlank() -> districtRepository.findAll().firstOrNull {
                 it.name.equals(request.unit, ignoreCase = true)
             }
-        } else existingClient.district
+            else -> existingClient.district
+        }
 
         val updatedClient = existingClient.copy(
             fio = request.fio,

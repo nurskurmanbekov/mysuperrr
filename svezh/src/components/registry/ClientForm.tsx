@@ -37,7 +37,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
     extraInfo: '',
     measures: '',
     appPassword: '',
-    unit: ''
+    unit: '',
+    districtId: ''
   });
   const [photo, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,7 +79,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         extraInfo: client.extraInfo || '',
         measures: client.measures || '',
         appPassword: '', // Не показываем старый пароль
-        unit: client.unit || ''
+        unit: client.unit || '',
+        districtId: client.district?.id?.toString() || ''
       });
     }
   }, [client]);
@@ -100,7 +102,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         // Удаляем пустые даты (иначе backend не сможет их распарсить)
         birthDate: formData.birthDate || null,
         obsStart: formData.obsStart || null,
-        obsEnd: formData.obsEnd || null
+        obsEnd: formData.obsEnd || null,
+        // Конвертируем districtId в число
+        districtId: formData.districtId ? parseInt(formData.districtId) : null
       };
 
       // При редактировании не требуем пароль если он пустой
@@ -149,6 +153,18 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+  };
+
+  const calculateAge = (birthDate: string): string => {
+    if (!birthDate) return '';
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age.toString();
   };
 
   return (
