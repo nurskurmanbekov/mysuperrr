@@ -35,15 +35,15 @@ interface ClientWithPosition {
   birthDate?: string;
   sex?: string;
   inn?: string;
-  passportNumber?: string;
-  registrationAddress?: string;
-  actualAddress?: string;
-  phoneNumber?: string;
-  emergencyContact?: string;
-  supervisionType?: string;
-  supervisionStartDate?: string;
-  supervisionEndDate?: string;
-  districtName?: string;
+  passport?: string;
+  regAddress?: string;
+  factAddress?: string;
+  contact1?: string;
+  contact2?: string;
+  obsType?: string;
+  obsStart?: string;
+  obsEnd?: string;
+  unit?: string;
   photoKey?: string;
   status: string;
   position?: {
@@ -257,7 +257,7 @@ const RealMap: React.FC = () => {
                       </div>
                       <div className="info-row">
                         <span className="label">Паспорт:</span>
-                        <span className="value">{client.passportNumber || 'Не указано'}</span>
+                        <span className="value">{client.passport || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -265,11 +265,11 @@ const RealMap: React.FC = () => {
                       <h4>📍 Адреса</h4>
                       <div className="info-row">
                         <span className="label">Регистрация:</span>
-                        <span className="value">{client.registrationAddress || 'Не указано'}</span>
+                        <span className="value">{client.regAddress || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Фактический:</span>
-                        <span className="value">{client.actualAddress || 'Не указано'}</span>
+                        <span className="value">{client.factAddress || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -277,11 +277,11 @@ const RealMap: React.FC = () => {
                       <h4>📞 Контакты</h4>
                       <div className="info-row">
                         <span className="label">Телефон:</span>
-                        <span className="value">{client.phoneNumber || 'Не указано'}</span>
+                        <span className="value">{client.contact1 || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Экстренный контакт:</span>
-                        <span className="value">{client.emergencyContact || 'Не указано'}</span>
+                        <span className="value">{client.contact2 || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -289,19 +289,19 @@ const RealMap: React.FC = () => {
                       <h4>⚖️ Надзор</h4>
                       <div className="info-row">
                         <span className="label">Тип:</span>
-                        <span className="value">{client.supervisionType || 'Не указано'}</span>
+                        <span className="value">{client.obsType || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Начало:</span>
-                        <span className="value">{formatDate(client.supervisionStartDate)}</span>
+                        <span className="value">{formatDate(client.obsStart)}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Окончание:</span>
-                        <span className="value">{formatDate(client.supervisionEndDate)}</span>
+                        <span className="value">{formatDate(client.obsEnd)}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Район:</span>
-                        <span className="value">{client.districtName || 'Не указано'}</span>
+                        <span className="value">{client.unit || 'Не указано'}</span>
                       </div>
                     </div>
 
