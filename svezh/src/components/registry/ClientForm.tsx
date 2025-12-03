@@ -417,7 +417,58 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           </div>
 
-          {/* 5. ПОДРАЗДЕЛЕНИЕ */}
+          {/* 5. УГОЛОВНОЕ ДЕЛО */}
+          <div className="form-section">
+            <h3>⚖️ Уголовное дело</h3>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Статья</label>
+                <input
+                  type="text"
+                  name="article"
+                  value={formData.article}
+                  onChange={handleChange}
+                  placeholder="Например: 158"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Часть</label>
+                <input
+                  type="text"
+                  name="part"
+                  value={formData.part}
+                  onChange={handleChange}
+                  placeholder="Например: 3"
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Пункт</label>
+                <input
+                  type="text"
+                  name="point"
+                  value={formData.point}
+                  onChange={handleChange}
+                  placeholder="Например: а, б"
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Код преступления</label>
+              <input
+                type="text"
+                name="code"
+                value={formData.code}
+                onChange={handleChange}
+                placeholder="Код по классификатору"
+              />
+            </div>
+          </div>
+
+          {/* 6. ПОДРАЗДЕЛЕНИЕ */}
           <div className="form-section">
             <h3>Подразделение</h3>
 
@@ -433,7 +484,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           </div>
 
-          {/* 6. ДОСТУП */}
+          {/* 7. ДОСТУП */}
           <div className="form-section">
             <h3>Доступ</h3>
 
@@ -449,7 +500,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           </div>
 
-          {/* 7. ЛИЦО */}
+          {/* 8. ЛИЦО */}
           <div className="form-section">
             <h3>Эталонное фото для Face ID</h3>
 
