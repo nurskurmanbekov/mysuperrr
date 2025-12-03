@@ -30,16 +30,16 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
     obsType: 'Электронный надзор',
     degree: '',
     udNumber: '',
-    code: '',
-    article: '',
-    part: '',
-    point: '',
     extraInfo: '',
     measures: '',
     appPassword: '',
     unit: '',
     districtId: ''
   });
+
+  const [articles, setArticles] = useState<Array<{ article: string; part: string; point: string }>>([
+    { article: '', part: '', point: '' }
+  ]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -72,16 +72,21 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         obsType: client.obsType || 'Электронный надзор',
         degree: client.degree || '',
         udNumber: client.udNumber || '',
-        code: client.code || '',
-        article: client.article || '',
-        part: client.part || '',
-        point: client.point || '',
         extraInfo: client.extraInfo || '',
         measures: client.measures || '',
         appPassword: '', // Не показываем старый пароль
         unit: client.unit || '',
         districtId: client.district?.id?.toString() || ''
       });
+
+      // Загружаем статьи
+      if (client.articles && client.articles.length > 0) {
+        setArticles(client.articles.map(a => ({
+          article: a.article || '',
+          part: a.part || '',
+          point: a.point || ''
+        })));
+      }
     }
   }, [client]);
 
@@ -104,7 +109,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         obsStart: formData.obsStart || null,
         obsEnd: formData.obsEnd || null,
         // Конвертируем districtId в число
-        districtId: formData.districtId ? parseInt(formData.districtId) : null
+        districtId: formData.districtId ? parseInt(formData.districtId) : null,
+        // Добавляем статьи осуждения
+        articles: articles.filter(a => a.article || a.part || a.point) // Убираем пустые статьи
       };
 
       // При редактировании не требуем пароль если он пустой
@@ -165,6 +172,22 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
       age--;
     }
     return age.toString();
+  };
+
+  const handleArticleChange = (index: number, field: keyof typeof articles[0], value: string) => {
+    const newArticles = [...articles];
+    newArticles[index][field] = value;
+    setArticles(newArticles);
+  };
+
+  const addArticle = () => {
+    setArticles([...articles, { article: '', part: '', point: '' }]);
+  };
+
+  const removeArticle = (index: number) => {
+    if (articles.length > 1) {
+      setArticles(articles.filter((_, i) => i !== index));
+    }
   };
 
   return (
@@ -297,6 +320,76 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
               />
             </div>
           </div>
+
+          <h3 style={{ marginTop: '20px', marginBottom: '15px', color: '#374151' }}>Статья осуждения</h3>
+          {articles.map((articleItem, index) => (
+            <div key={index} style={{ marginBottom: '15px', padding: '15px', backgroundColor: '#f9fafb', borderRadius: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <strong>Статья {index + 1}</strong>
+                {articles.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeArticle(index)}
+                    style={{
+                      padding: '5px 10px',
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Удалить
+                  </button>
+                )}
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Статья</label>
+                  <input
+                    type="text"
+                    value={articleItem.article}
+                    onChange={(e) => handleArticleChange(index, 'article', e.target.value)}
+                    placeholder="Например: 228"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Часть</label>
+                  <input
+                    type="text"
+                    value={articleItem.part}
+                    onChange={(e) => handleArticleChange(index, 'part', e.target.value)}
+                    placeholder="Например: 1"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Пункт</label>
+                  <input
+                    type="text"
+                    value={articleItem.point}
+                    onChange={(e) => handleArticleChange(index, 'point', e.target.value)}
+                    placeholder="Например: а"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={addArticle}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              fontWeight: '600'
+            }}
+          >
+            + Добавить статью
+          </button>
 
           <div className="form-group">
             <label>Пароль для приложения {isEditMode && '(оставьте пустым, чтобы не менять)'}{!isEditMode && '*'}</label>

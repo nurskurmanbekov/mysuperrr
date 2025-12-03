@@ -21,10 +21,7 @@ data class RegistryCreateRequest(
     val obsType: String,
     val degree: String? = null,
     val udNumber: String? = null,
-    val code: String? = null,
-    val article: String? = null,
-    val part: String? = null,
-    val point: String? = null,
+    val articles: List<ArticleDTO>? = null, // Массив статей осуждения
     val extraInfo: String? = null,
     val measures: String? = null,
     val appPassword: String, // Пароль для приложения

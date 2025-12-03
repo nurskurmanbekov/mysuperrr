@@ -2,7 +2,9 @@ package com.example.probationbackend.service
 
 import com.example.probationbackend.dto.RegistryCreateRequest
 import com.example.probationbackend.model.Client
+import com.example.probationbackend.model.Article
 import com.example.probationbackend.repository.ClientRepository
+import com.example.probationbackend.repository.ArticleRepository
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -12,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile
 @Transactional
 class RegistryService(
     private val clientRepository: ClientRepository,
+    private val articleRepository: ArticleRepository,
     private val authService: AuthService,
     private val passwordEncoder: PasswordEncoder,
     private val traccarService: TraccarService,
@@ -64,10 +67,6 @@ class RegistryService(
             obsEnd = request.obsEnd,
             degree = request.degree,
             udNumber = request.udNumber,
-            code = request.code,
-            article = request.article,
-            part = request.part,
-            point = request.point,
             extraInfo = request.extraInfo,
             measures = request.measures,
             appPassword = encodedAppPassword,
@@ -75,6 +74,19 @@ class RegistryService(
             district = district // Устанавливаем район
         )
         val savedClient = clientRepository.save(client)
+
+        // 4.5. Сохраняем статьи осуждения если они указаны
+        if (!request.articles.isNullOrEmpty()) {
+            request.articles.forEach { articleDTO ->
+                val article = Article(
+                    client = savedClient,
+                    article = articleDTO.article,
+                    part = articleDTO.part,
+                    point = articleDTO.point
+                )
+                articleRepository.save(article)
+            }
+        }
 
         var photoKey: String? = null
         // 5. Если пришло эталонное фото, сохраняем его
@@ -152,14 +164,10 @@ class RegistryService(
             passport = request.passport,
             contact1 = request.contact1,
             contact2 = request.contact2,
-            article = request.article,
-            part = request.part,
-            point = request.point,
             degree = request.degree,
             measures = request.measures,
             obsStart = request.obsStart,
             obsEnd = request.obsEnd,
-            code = request.code,
             udNumber = request.udNumber,
             erpNumber = request.erpNumber,
             sex = request.sex,
@@ -167,7 +175,25 @@ class RegistryService(
             district = district // Обновляем район
         )
 
-        return clientRepository.save(updatedClient)
+        val savedClient = clientRepository.save(updatedClient)
+
+        // Обновляем статьи осуждения
+        // Удаляем старые статьи
+        articleRepository.deleteByClientId(id)
+        // Добавляем новые статьи
+        if (!request.articles.isNullOrEmpty()) {
+            request.articles.forEach { articleDTO ->
+                val article = Article(
+                    client = savedClient,
+                    article = articleDTO.article,
+                    part = articleDTO.part,
+                    point = articleDTO.point
+                )
+                articleRepository.save(article)
+            }
+        }
+
+        return savedClient
     }
 
     fun deleteClient(id: Long) {

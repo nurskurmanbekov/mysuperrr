@@ -30,10 +30,12 @@ export interface Client {
   obsEnd?: string;
   degree?: string;
   udNumber?: string;
-  code?: string;
-  article?: string;
-  part?: string;
-  point?: string;
+  articles?: Array<{
+    id?: number;
+    article?: string;
+    part?: string;
+    point?: string;
+  }>;
   extraInfo?: string;
   measures?: string;
   district?: {
