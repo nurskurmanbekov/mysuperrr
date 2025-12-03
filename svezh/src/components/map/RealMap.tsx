@@ -44,6 +44,10 @@ interface ClientWithPosition {
   obsStart?: string;
   obsEnd?: string;
   unit?: string;
+  article?: string;
+  part?: string;
+  point?: string;
+  code?: string;
   photoKey?: string;
   status: string;
   position?: {
@@ -304,6 +308,36 @@ const RealMap: React.FC = () => {
                         <span className="value">{client.unit || 'Не указано'}</span>
                       </div>
                     </div>
+
+                    {(client.article || client.part || client.point || client.code) && (
+                      <div className="info-section">
+                        <h4>⚖️ Уголовное дело</h4>
+                        {client.article && (
+                          <div className="info-row">
+                            <span className="label">Статья:</span>
+                            <span className="value">{client.article}</span>
+                          </div>
+                        )}
+                        {client.part && (
+                          <div className="info-row">
+                            <span className="label">Часть:</span>
+                            <span className="value">{client.part}</span>
+                          </div>
+                        )}
+                        {client.point && (
+                          <div className="info-row">
+                            <span className="label">Пункт:</span>
+                            <span className="value">{client.point}</span>
+                          </div>
+                        )}
+                        {client.code && (
+                          <div className="info-row">
+                            <span className="label">Код:</span>
+                            <span className="value">{client.code}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {client.position && (
                       <div className="info-section">
