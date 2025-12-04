@@ -37,15 +37,12 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
     erpNumber: '',
     degree: '',
     udNumber: '',
-    code: '',
-    article: '',
-    part: '',
-    point: '',
     extraInfo: '',
     measures: '',
     // Доступ
     appPassword: ''
   });
+  const [convictionArticles, setConvictionArticles] = useState<Array<{ article: string; part: string; point: string }>>([]);
   const [photo, setPhoto] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -93,14 +90,17 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         erpNumber: client.erpNumber || '',
         degree: client.degree || '',
         udNumber: client.udNumber || '',
-        code: client.code || '',
-        article: client.article || '',
-        part: client.part || '',
-        point: client.point || '',
         extraInfo: client.extraInfo || '',
         measures: client.measures || '',
         appPassword: '' // Не показываем старый пароль
       });
+
+      // Загружаем статьи осуждения
+      if (client.convictionArticles && client.convictionArticles.length > 0) {
+        setConvictionArticles(client.convictionArticles);
+      } else {
+        setConvictionArticles([]);
+      }
     }
   }, [client]);
 
@@ -125,7 +125,9 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
         // Удаляем пустые даты (иначе backend не сможет их распарсить)
         birthDate: formData.birthDate || null,
         obsStart: formData.obsStart || null,
-        obsEnd: formData.obsEnd || null
+        obsEnd: formData.obsEnd || null,
+        // Добавляем статьи осуждения (только если есть хотя бы одна непустая статья)
+        convictionArticles: convictionArticles.filter(art => art.article || art.part || art.point)
       };
 
       // При редактировании не требуем пароль если он пустой
@@ -185,6 +187,21 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
 
       return updated;
     });
+  };
+
+  // Функции для работы со статьями осуждения
+  const addConvictionArticle = () => {
+    setConvictionArticles(prev => [...prev, { article: '', part: '', point: '' }]);
+  };
+
+  const removeConvictionArticle = (index: number) => {
+    setConvictionArticles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateConvictionArticle = (index: number, field: 'article' | 'part' | 'point', value: string) => {
+    setConvictionArticles(prev => prev.map((item, i) =>
+      i === index ? { ...item, [field]: value } : item
+    ));
   };
 
   return (
@@ -433,7 +450,96 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           </div>
 
-          {/* 6. ДОСТУП */}
+          {/* 6. СТАТЬЯ ОСУЖДЕНИЯ */}
+          <div className="form-section">
+            <h3>⚖ Статья осуждения</h3>
+
+            {convictionArticles.length === 0 && (
+              <p style={{ color: '#6b7280', marginBottom: '15px' }}>
+                Статьи не добавлены. Нажмите кнопку ниже, чтобы добавить статью.
+              </p>
+            )}
+
+            {convictionArticles.map((article, index) => (
+              <div key={index} style={{
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '15px',
+                backgroundColor: '#f9fafb'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <strong>Статья #{index + 1}</strong>
+                  <button
+                    type="button"
+                    onClick={() => removeConvictionArticle(index)}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '5px 12px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Удалить
+                  </button>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Статья</label>
+                    <input
+                      type="text"
+                      value={article.article}
+                      onChange={(e) => updateConvictionArticle(index, 'article', e.target.value)}
+                      placeholder="Например: 158"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Часть</label>
+                    <input
+                      type="text"
+                      value={article.part}
+                      onChange={(e) => updateConvictionArticle(index, 'part', e.target.value)}
+                      placeholder="Например: 3"
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Пункт</label>
+                    <input
+                      type="text"
+                      value={article.point}
+                      onChange={(e) => updateConvictionArticle(index, 'point', e.target.value)}
+                      placeholder="Например: а"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addConvictionArticle}
+              style={{
+                backgroundColor: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '600'
+              }}
+            >
+              + Добавить статью
+            </button>
+          </div>
+
+          {/* 7. ДОСТУП */}
           <div className="form-section">
             <h3>Доступ</h3>
 
@@ -449,7 +555,7 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
             </div>
           </div>
 
-          {/* 7. ЛИЦО */}
+          {/* 8. ЛИЦО */}
           <div className="form-section">
             <h3>Эталонное фото для Face ID</h3>
 

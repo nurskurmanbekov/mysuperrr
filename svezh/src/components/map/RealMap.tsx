@@ -45,6 +45,11 @@ interface ClientWithPosition {
   supervisionEndDate?: string;
   districtName?: string;
   photoKey?: string;
+  convictionArticles?: Array<{
+    article: string;
+    part: string;
+    point: string;
+  }>;
   status: string;
   position?: {
     latitude: number;
@@ -153,6 +158,15 @@ const RealMap: React.FC = () => {
     if (!dateString) return 'Не указано';
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU');
+  };
+
+  const formatConvictionArticle = (article: { article: string; part: string; point: string }): string => {
+    let result = '';
+    if (article.article) result += `ст. ${article.article}`;
+    if (article.part) result += ` ч. ${article.part}`;
+    if (article.point) result += ` п. «${article.point}»`;
+    if (result) result += ' УК';
+    return result || 'Не указано';
   };
 
   if (!isClient) {
@@ -303,6 +317,21 @@ const RealMap: React.FC = () => {
                         <span className="label">Район:</span>
                         <span className="value">{client.districtName || 'Не указано'}</span>
                       </div>
+                    </div>
+
+                    <div className="info-section">
+                      <h4>⚖ Статья осуждения</h4>
+                      {client.convictionArticles && client.convictionArticles.length > 0 ? (
+                        client.convictionArticles.map((article, index) => (
+                          <div className="info-row" key={index}>
+                            <span className="value">{formatConvictionArticle(article)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="info-row">
+                          <span className="value">Не указано</span>
+                        </div>
+                      )}
                     </div>
 
                     {client.position && (

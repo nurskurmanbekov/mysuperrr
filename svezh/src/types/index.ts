@@ -29,10 +29,11 @@ export interface Client {
   obsEnd?: string;
   degree?: string;
   udNumber?: string;
-  code?: string;
-  article?: string;
-  part?: string;
-  point?: string;
+  convictionArticles?: Array<{
+    article: string;
+    part: string;
+    point: string;
+  }>;
   extraInfo?: string;
   measures?: string;
   unit?: string;
