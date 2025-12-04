@@ -70,7 +70,7 @@ data class Client(
     @Column(name = "ud_number")
     val udNumber: String? = null,
 
-    @OneToMany(mappedBy = "client", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "client", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
     val articles: MutableList<Article> = mutableListOf(),
 
     @Column(name = "extra_info", columnDefinition = "TEXT")

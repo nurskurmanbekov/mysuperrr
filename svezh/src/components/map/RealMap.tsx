@@ -46,6 +46,12 @@ interface ClientWithPosition {
   districtName?: string;
   photoKey?: string;
   status: string;
+  articles?: Array<{
+    id?: number;
+    article?: string;
+    part?: string;
+    point?: string;
+  }>;
   position?: {
     latitude: number;
     longitude: number;
@@ -303,6 +309,29 @@ const RealMap: React.FC = () => {
                         <span className="label">Район:</span>
                         <span className="value">{client.districtName || 'Не указано'}</span>
                       </div>
+                    </div>
+
+                    <div className="info-section">
+                      <h4>⚖️ Статья осуждения</h4>
+                      {client.articles && client.articles.length > 0 ? (
+                        client.articles.map((art, index) => {
+                          const parts = [];
+                          if (art.article) parts.push(`ст. ${art.article}`);
+                          if (art.part) parts.push(`ч. ${art.part}`);
+                          if (art.point) parts.push(`п. «${art.point}»`);
+                          const articleText = parts.length > 0 ? `${parts.join(' ')} УК` : 'Не указано';
+
+                          return (
+                            <div key={index} className="info-row">
+                              <span className="value">{articleText}</span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="info-row">
+                          <span className="value">Не указано</span>
+                        </div>
+                      )}
                     </div>
 
                     {client.position && (
