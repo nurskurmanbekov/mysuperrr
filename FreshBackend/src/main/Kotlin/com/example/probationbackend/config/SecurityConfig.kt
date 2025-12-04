@@ -28,10 +28,23 @@ class SecurityConfig {
     @Bean
     fun corsConfigurationSource(): CorsConfigurationSource {
         val configuration = CorsConfiguration()
-        configuration.allowedOriginPatterns = listOf("http://localhost:5173") // В продакшене укажите конкретные домены
-        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")
+        // Разрешаем все необходимые origins для фронтенда
+        configuration.allowedOriginPatterns = listOf(
+            "http://localhost:5173",
+            "http://192.168.88.24:3000",
+            "http://localhost:3000"
+        )
+        // Разрешаем все HTTP методы, включая OPTIONS для preflight
+        configuration.allowedMethods = listOf("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH")
+        // Разрешаем все заголовки
         configuration.allowedHeaders = listOf("*")
+        // Разрешаем отправку credentials (cookies, authorization headers)
         configuration.allowCredentials = true
+        // Заголовки, которые браузер может читать из ответа
+        configuration.exposedHeaders = listOf("Authorization", "Content-Type")
+        // Время кеширования preflight запросов (в секундах)
+        configuration.maxAge = 3600L
+
         val source = UrlBasedCorsConfigurationSource()
         source.registerCorsConfiguration("/**", configuration)
         return source

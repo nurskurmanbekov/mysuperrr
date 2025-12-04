@@ -16,6 +16,8 @@ import org.springframework.web.multipart.MultipartFile
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import org.springframework.core.io.Resource
+import org.springframework.http.MediaType
 
 @RestController
 @RequestMapping("/api/facecheck")
@@ -141,6 +143,39 @@ class FaceCheckController(
         } catch (e: Exception) {
             e.printStackTrace()
             return ResponseEntity.status(500).body(mapOf("error" to "Failed to register token: ${e.message}"))
+        }
+    }
+
+    // Serve photos from storage
+    @GetMapping("/photos/{subDir}/{filename:.+}")
+    fun servePhoto(
+        @PathVariable subDir: String,
+        @PathVariable filename: String
+    ): ResponseEntity<Resource> {
+        try {
+            println("DEBUG FaceController: Serving photo - subDir: $subDir, filename: $filename")
+            val resource = photoStorageService.loadPhotoAsResource(filename, subDir)
+
+            if (resource == null || !resource.exists()) {
+                println("ERROR FaceController: Photo not found - $subDir/$filename")
+                return ResponseEntity.notFound().build()
+            }
+
+            // Determine content type based on file extension
+            val contentType = when {
+                filename.endsWith(".jpg", ignoreCase = true) || filename.endsWith(".jpeg", ignoreCase = true) -> MediaType.IMAGE_JPEG
+                filename.endsWith(".png", ignoreCase = true) -> MediaType.IMAGE_PNG
+                else -> MediaType.APPLICATION_OCTET_STREAM
+            }
+
+            println("DEBUG FaceController: Successfully serving photo - $subDir/$filename")
+            return ResponseEntity.ok()
+                .contentType(contentType)
+                .body(resource)
+        } catch (e: Exception) {
+            println("ERROR FaceController: Error serving photo - ${e.message}")
+            e.printStackTrace()
+            return ResponseEntity.status(500).build()
         }
     }
 }

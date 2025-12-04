@@ -22,27 +22,41 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       window.location.href = '/login';
+    } else if (error.response?.status === 403) {
+      // 403 Forbidden - пользователь не имеет доступа (например, клиент пытается войти в веб-интерфейс)
+      if (error.response?.data?.error === 'PROBATIONER_WEB_ACCESS_DENIED') {
+        localStorage.removeItem('authToken');
+        window.location.href = '/login';
+        alert('Доступ запрещён. Клиенты могут использовать только мобильное приложение.');
+      }
     }
     return Promise.reject(error);
   }
 );
 
 export const authAPI = {
-  login: (email: string, password: string) => 
-    api.post('/auth/login', { email, password }),
-  
+  login: (login: string, password: string) =>
+    api.post('/auth/login', { login, password }),
+
   getMe: () => api.get('/auth/me'),
-  
+
   logout: () => api.post('/auth/logout')
 };
 
 export const registryAPI = {
   getClients: () => api.get('/registry'),
-  
-  createClient: (clientData: FormData) => 
+
+  createClient: (clientData: FormData) =>
     api.post('/registry', clientData, {
       headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    }),
+
+  updateClient: (id: number, clientData: FormData) =>
+    api.put(`/registry/${id}`, clientData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+
+  deleteClient: (id: number) => api.delete(`/registry/${id}`)
 };
 
 export const devicesAPI = {
@@ -65,7 +79,19 @@ export const faceCheckAPI = {
     formData.append('userId', userId);
     formData.append('file', file);
     return api.post('/facecheck/verify', formData);
-  }
+  },
+
+  sendResult: (data: any) => api.post('/facecheck/result', data)
+};
+
+export const adminAPI = {
+  // Employee management
+  deleteEmployee: (id: number) => api.delete(`/admin/employees/${id}`),
+
+  updateEmployee: (id: number, data: any) => api.put(`/admin/employees/${id}`, data),
+
+  changeEmployeePassword: (id: number, newPassword: string) =>
+    api.put(`/admin/employees/${id}/password`, { newPassword })
 };
 
 // services/api.ts

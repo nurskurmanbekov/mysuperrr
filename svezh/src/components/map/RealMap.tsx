@@ -45,6 +45,11 @@ interface ClientWithPosition {
   supervisionEndDate?: string;
   districtName?: string;
   photoKey?: string;
+  convictionArticles?: Array<{
+    article: string;
+    part: string;
+    point: string;
+  }>;
   status: string;
   position?: {
     latitude: number;
@@ -69,33 +74,42 @@ const RealMap: React.FC = () => {
 
   const loadClients = useCallback(async () => {
     try {
-      const response = await api.get('/admin/clients');
-      const clientsData = response.data || [];
+      // Получаем клиентов и их последние GPS позиции из нашего backend
+      const [clientsResponse, positionsResponse] = await Promise.all([
+        api.get('/admin/clients'),
+        api.get('/positions/latest')
+      ]);
 
-      // Временно используем тестовые позиции в Бишкеке
-      // TODO: интегрировать с реальным Position API
-      const clientsWithPositions = clientsData.map((client: any, index: number) => {
-        const bishkekLocations = [
-          [42.8746, 74.5698], // Центр Бишкека
-          [42.8784, 74.5865], // Проспект Чуй
-          [42.8510, 74.5585], // Юг города
-          [42.8900, 74.6100], // Северо-восток
-          [42.8600, 74.5400], // Запад
-          [42.8350, 74.5900], // Ошский рынок
-          [42.8820, 74.5920], // Ала-Тоо площадь
-          [42.8450, 74.6050], // Политехнический институт
-        ];
+      const clientsData = clientsResponse.data || [];
+      const positionsData = positionsResponse.data?.positions || [];
 
-        const location = bishkekLocations[index % bishkekLocations.length];
+      // Создаем Map для быстрого поиска позиций по uniqueId
+      const positionsMap = new Map();
+      positionsData.forEach((pos: any) => {
+        positionsMap.set(pos.uniqueId, pos);
+      });
+
+      // Объединяем клиентов с их позициями
+      const clientsWithPositions = clientsData.map((client: any) => {
+        const position = positionsMap.get(client.uniqueId || client.inn);
+
+        // Определяем статус: online если позиция обновлялась < 5 минут назад
+        let status = 'offline';
+        if (position && position.serverTime) {
+          const lastUpdate = new Date(position.serverTime);
+          const now = new Date();
+          const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+          status = diffMinutes < 5 ? 'online' : 'offline';
+        }
 
         return {
           ...client,
-          status: index % 3 === 0 ? 'offline' : 'online', // Временный статус
-          position: {
-            latitude: location[0],
-            longitude: location[1],
-            timestamp: new Date().toISOString()
-          }
+          status,
+          position: position ? {
+            latitude: position.latitude,
+            longitude: position.longitude,
+            timestamp: position.timestamp
+          } : null
         };
       });
 
@@ -111,6 +125,13 @@ const RealMap: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
     loadClients();
+
+    // Обновляем данные каждые 10 секунд для отображения актуального статуса
+    const interval = setInterval(() => {
+      loadClients();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [loadClients]);
 
   const getStatusColor = (status: string) => {
@@ -137,6 +158,15 @@ const RealMap: React.FC = () => {
     if (!dateString) return 'Не указано';
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU');
+  };
+
+  const formatConvictionArticle = (article: { article: string; part: string; point: string }): string => {
+    let result = '';
+    if (article.article) result += `ст. ${article.article}`;
+    if (article.part) result += ` ч. ${article.part}`;
+    if (article.point) result += ` п. «${article.point}»`;
+    if (result) result += ' УК';
+    return result || 'Не указано';
   };
 
   if (!isClient) {
@@ -287,6 +317,21 @@ const RealMap: React.FC = () => {
                         <span className="label">Район:</span>
                         <span className="value">{client.districtName || 'Не указано'}</span>
                       </div>
+                    </div>
+
+                    <div className="info-section">
+                      <h4>⚖ Статья осуждения</h4>
+                      {client.convictionArticles && client.convictionArticles.length > 0 ? (
+                        client.convictionArticles.map((article, index) => (
+                          <div className="info-row" key={index}>
+                            <span className="value">{formatConvictionArticle(article)}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="info-row">
+                          <span className="value">Не указано</span>
+                        </div>
+                      )}
                     </div>
 
                     {client.position && (

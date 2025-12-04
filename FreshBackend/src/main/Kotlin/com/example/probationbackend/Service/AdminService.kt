@@ -180,6 +180,20 @@ class AdminService(
         userRepository.deleteById(userId)
     }
 
+    fun changeEmployeePassword(userId: Long, newPassword: String) {
+        val user = userRepository.findById(userId).orElseThrow {
+            IllegalArgumentException("User not found")
+        }
+
+        if (user.userType != "employee") {
+            throw IllegalArgumentException("User is not an employee")
+        }
+
+        val encodedPassword = passwordEncoder.encode(newPassword)
+        val updatedUser = user.copy(passwordHash = encodedPassword)
+        userRepository.save(updatedUser)
+    }
+
     // ============================================
     // УПРАВЛЕНИЕ ОСУЖДЕННЫМИ
     // ============================================

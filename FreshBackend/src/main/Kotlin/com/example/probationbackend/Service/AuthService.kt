@@ -136,4 +136,11 @@ class AuthService(
         )
         return userRepository.save(newUser)
     }
+
+    fun deleteUserByInn(inn: String) {
+        val user = userRepository.findByInn(inn).orElseThrow {
+            IllegalArgumentException("User with INN $inn not found")
+        }
+        userRepository.delete(user)
+    }
 }

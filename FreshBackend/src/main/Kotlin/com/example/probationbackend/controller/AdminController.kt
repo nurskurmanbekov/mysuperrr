@@ -70,6 +70,12 @@ class AdminController(
             mapOf("error" to "Unauthorized")
         )
 
+        if (!isDeptAdmin(currentUser)) {
+            return ResponseEntity.status(403).body(
+                mapOf("error" to "Доступ запрещён. Только Администратор департамента может создавать сотрудников.")
+            )
+        }
+
         return try {
             val employee = adminService.createEmployee(
                 inn = request.inn,
@@ -95,7 +101,13 @@ class AdminController(
             mapOf("error" to "Unauthorized")
         )
 
-        return try {
+        if (!isDeptAdmin(currentUser)) {
+            return ResponseEntity.status(403).body(
+                mapOf("error" to "Доступ запрещён. Только Администратор департамента может редактировать сотрудников.")
+            )
+        }
+
+        return try{
             val employee = adminService.updateEmployee(
                 userId = employeeId,
                 newDistrictId = request.districtId,
@@ -127,9 +139,39 @@ class AdminController(
             mapOf("error" to "Unauthorized")
         )
 
+        if (!isDeptAdmin(currentUser)) {
+            return ResponseEntity.status(403).body(
+                mapOf("error" to "Доступ запрещён. Только Администратор департамента может удалять сотрудников.")
+            )
+        }
+
         return try {
             adminService.deleteEmployee(employeeId)
             ResponseEntity.ok(mapOf("message" to "Employee deleted"))
+        } catch (e: IllegalArgumentException) {
+            ResponseEntity.badRequest().body(mapOf("error" to e.message))
+        }
+    }
+
+    @PutMapping("/employees/{employeeId}/password")
+    fun changeEmployeePassword(
+        @RequestHeader("Authorization") authHeader: String,
+        @PathVariable employeeId: Long,
+        @RequestBody request: ChangePasswordRequest
+    ): ResponseEntity<*> {
+        val currentUser = getCurrentUser(authHeader) ?: return ResponseEntity.status(401).body(
+            mapOf("error" to "Unauthorized")
+        )
+
+        if (!isDeptAdmin(currentUser)) {
+            return ResponseEntity.status(403).body(
+                mapOf("error" to "Доступ запрещён. Только Администратор департамента может менять пароли.")
+            )
+        }
+
+        return try {
+            adminService.changeEmployeePassword(employeeId, request.newPassword)
+            ResponseEntity.ok(mapOf("message" to "Password changed successfully"))
         } catch (e: IllegalArgumentException) {
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         }
@@ -144,6 +186,17 @@ class AdminController(
         val currentUser = getCurrentUser(authHeader) ?: return ResponseEntity.status(401).body(
             mapOf("error" to "Unauthorized")
         )
+
+        // ВАЖНО: Блокируем клиентов (осужденных) от доступа к веб-интерфейсу
+        if (currentUser.userType == "probationer") {
+            println("✗ ADMIN ACCESS BLOCKED: Client (probationer) ${currentUser.inn} attempted to access admin panel")
+            return ResponseEntity.status(403).body(
+                mapOf(
+                    "message" to "Доступ запрещён. Клиенты могут использовать только мобильное приложение.",
+                    "error" to "PROBATIONER_WEB_ACCESS_DENIED"
+                )
+            )
+        }
 
         val clients = adminService.getClients(currentUser)
         return ResponseEntity.ok(clients)
@@ -201,6 +254,11 @@ class AdminController(
         val userId = jwtTokenProvider.getUserIdFromToken(token) ?: return null
         return userRepository.findById(userId).orElse(null)
     }
+
+    private fun isDeptAdmin(user: User): Boolean {
+        val role = user.attributes?.get("role") as? String
+        return role == "deptAdmin"
+    }
 }
 
 // DTO классы
@@ -227,4 +285,8 @@ data class TransferClientRequest(
 data class UpdateClientRequest(
     val fio: String? = null,
     val districtId: Long? = null
+)
+
+data class ChangePasswordRequest(
+    val newPassword: String
 )

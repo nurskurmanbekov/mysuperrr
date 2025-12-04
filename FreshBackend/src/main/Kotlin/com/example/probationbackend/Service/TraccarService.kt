@@ -176,6 +176,35 @@ class TraccarService(
         }
     }
 
+    fun deleteDeviceByUniqueId(uniqueId: String): Boolean {
+        val device = getDeviceByUniqueId(uniqueId) ?: return false
+        val deviceId = device.get("id").asLong()
+
+        return try {
+            webClient.delete()
+                .uri("/api/devices/$deviceId")
+                .retrieve()
+                .onStatus({ status -> status.is4xxClientError }) { response ->
+                    response.bodyToMono<String>()
+                        .flatMap { body ->
+                            throw RuntimeException("Client Error: ${response.statusCode()} - $body")
+                        }
+                }
+                .onStatus({ status -> status.is5xxServerError }) { response ->
+                    response.bodyToMono<String>()
+                        .flatMap { body ->
+                            throw RuntimeException("Server Error: ${response.statusCode()} - $body")
+                        }
+                }
+                .bodyToMono(String::class.java)
+                .block()
+            true
+        } catch (e: Exception) {
+            println("Error deleting device from Traccar: ${e.message}")
+            false
+        }
+    }
+
     // Метод для обновления атрибутов FaceID
     fun updateFaceIdAttributes(uniqueId: String, faceOk: Boolean, distance: Double?, message: String) {
         val nowIso = LocalDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "Z"

@@ -57,9 +57,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (login, password) => {
     try {
-      const response = await authAPI.login(email, password);
+      const response = await authAPI.login(login, password);
       const { token: newToken, user: userData } = response.data;
 
       // 🔍 ДИАГНОСТИКА: Проверяем что возвращает Backend при логине
