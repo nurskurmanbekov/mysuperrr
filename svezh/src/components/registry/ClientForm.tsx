@@ -171,6 +171,8 @@ const ClientForm: React.FC<ClientFormProps> = ({ client, onClose, onSuccess }) =
       onSuccess();
     } catch (error: any) {
       console.error(isEditMode ? 'Ошибка обновления клиента:' : 'Ошибка создания клиента:', error);
+      console.error('Response data:', error.response?.data);
+      console.error('Request data being sent:', requestData);
       const errorMessage = error.response?.data?.error || error.response?.data?.message ||
         (isEditMode ? 'Ошибка при обновлении клиента. Проверьте данные.' : 'Ошибка при создании клиента. Проверьте данные.');
       setError(errorMessage);
