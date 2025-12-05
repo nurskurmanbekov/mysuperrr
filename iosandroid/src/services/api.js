@@ -67,6 +67,11 @@ export const deviceAPI = {
     api.get('/devices'),
 };
 
+export const mobileAPI = {
+  getProfile: () =>
+    api.get('/mobile/profile'),
+};
+
 export const traccarAPI = {
   // Отправка GPS данных через Nginx в Traccar
   sendPosition: (positionData) => {

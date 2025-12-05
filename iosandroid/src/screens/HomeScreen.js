@@ -10,20 +10,33 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../store/authContext';
+import { mobileAPI } from '../services/api';
 import gpsService from '../services/gpsService';
 
 const HomeScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [gpsTracking, setGpsTracking] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [clientData, setClientData] = useState(null);
 
   useEffect(() => {
     // Проверяем статус GPS при загрузке
     checkGpsStatus();
+    // Загружаем данные клиента
+    loadClientData();
   }, []);
 
   const checkGpsStatus = () => {
     setGpsTracking(gpsService.isTracking);
+  };
+
+  const loadClientData = async () => {
+    try {
+      const response = await mobileAPI.getProfile();
+      setClientData(response.data);
+    } catch (error) {
+      console.log('Error loading client data:', error);
+    }
   };
 
   const handleStartGPS = async () => {
@@ -59,7 +72,7 @@ const HomeScreen = ({ navigation }) => {
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.welcome}>Добро пожаловать</Text>
-          <Text style={styles.userInfo}>{user?.attributes?.fio || user?.name || user?.inn}</Text>
+          <Text style={styles.userInfo}>{clientData?.fio || user?.name || user?.inn}</Text>
         </View>
 
         <View style={styles.menu}>

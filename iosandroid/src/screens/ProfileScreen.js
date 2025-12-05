@@ -9,11 +9,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../store/authContext';
+import { mobileAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [clientData, setClientData] = useState(null);
 
   // 🔍 ДИАГНОСТИКА: Проверяем user объект
   useEffect(() => {
@@ -37,9 +39,13 @@ const ProfileScreen = () => {
   const loadProfileData = async () => {
     try {
       setLoading(true);
-      // Данные профиля загружены из контекста
+      // Загружаем данные клиента из реестра
+      const response = await mobileAPI.getProfile();
+      setClientData(response.data);
+      console.log('Client data loaded:', response.data);
     } catch (error) {
       console.log('Error loading profile data:', error);
+      Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
     } finally {
       setLoading(false);
     }
@@ -80,9 +86,9 @@ const ProfileScreen = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Личная информация</Text>
         <View style={styles.infoCard}>
-          <InfoRow label="ФИО" value={user.attributes?.fio || 'Не указано'} />
-          <InfoRow label="Возраст" value={user.attributes?.age || 'Не указано'} />
-          <InfoRow label="ИНН" value={user.name} />
+          <InfoRow label="ФИО" value={clientData?.fio || 'Не указано'} />
+          <InfoRow label="Возраст" value={clientData?.age ? `${clientData.age} лет` : 'Не указано'} />
+          <InfoRow label="ИНН" value={clientData?.inn || user.name} />
         </View>
       </View>
 
