@@ -1,5 +1,6 @@
 package com.example.probationbackend.model
 
+import com.fasterxml.jackson.annotation.JsonManagedReference
 import jakarta.persistence.*
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -73,17 +74,9 @@ data class Client(
     @Column(name = "ud_number")
     val udNumber: String? = null,
 
-    @Column(name = "code")
-    val code: String? = null,
-
-    @Column(name = "article")
-    val article: String? = null,
-
-    @Column(name = "part")
-    val part: String? = null,
-
-    @Column(name = "point")
-    val point: String? = null,
+    @OneToMany(mappedBy = "client", cascade = [CascadeType.ALL], orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
+    val articles: MutableList<Article> = mutableListOf(),
 
     @Column(name = "extra_info", columnDefinition = "TEXT")
     val extraInfo: String? = null,
