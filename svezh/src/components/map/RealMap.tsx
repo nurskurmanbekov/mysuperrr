@@ -314,25 +314,25 @@ const RealMap: React.FC = () => {
                     <div className="info-section">
                       <h4>⚖️ Статья осуждения</h4>
                       {client.articles && client.articles.length > 0 ? (
-                        client.articles.map((articleItem, index) => (
-                          <div key={index} style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: index < client.articles!.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                            <div style={{ fontWeight: 600, marginBottom: '5px', color: '#374151' }}>
-                              Статья {index + 1}
-                            </div>
-                            <div className="info-row">
-                              <span className="label">Статья:</span>
-                              <span className="value">{articleItem.article || 'Не указано'}</span>
-                            </div>
-                            <div className="info-row">
-                              <span className="label">Часть:</span>
-                              <span className="value">{articleItem.part || 'Не указано'}</span>
-                            </div>
-                            <div className="info-row">
-                              <span className="label">Пункт:</span>
-                              <span className="value">{articleItem.point || 'Не указано'}</span>
-                            </div>
-                          </div>
-                        ))
+                        <div style={{ marginTop: '8px' }}>
+                          {client.articles.map((articleItem, index) => {
+                            const parts = [];
+                            if (articleItem.article) parts.push(`ст. ${articleItem.article}`);
+                            if (articleItem.part) parts.push(`ч. ${articleItem.part}`);
+                            if (articleItem.point) parts.push(`п. «${articleItem.point}»`);
+                            const articleText = parts.length > 0 ? `${parts.join(' ')} УК` : 'Не указано';
+
+                            return (
+                              <div key={index} style={{
+                                marginBottom: '6px',
+                                color: '#374151',
+                                fontSize: '14px'
+                              }}>
+                                {articleText}
+                              </div>
+                            );
+                          })}
+                        </div>
                       ) : (
                         <div className="info-row">
                           <span className="value">Не указано</span>
