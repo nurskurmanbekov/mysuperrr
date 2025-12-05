@@ -9,6 +9,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import FaceCheckScreen from './src/screens/FaceCheckScreen';
 import CameraScreen from './src/screens/CameraScreen';
+import NotificationsScreen from './src/screens/NotificationsScreen';
 
 const Stack = createStackNavigator();
 
@@ -36,13 +37,18 @@ function App() {
             component={HomeScreen}
             options={{ title: 'Главная' }}
           />
-          <Stack.Screen 
-            name="Profile" 
+          <Stack.Screen
+            name="Profile"
             component={ProfileScreen}
             options={{ title: 'Профиль' }}
           />
-          <Stack.Screen 
-            name="FaceCheck" 
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+            options={{ title: 'Уведомления' }}
+          />
+          <Stack.Screen
+            name="FaceCheck"
             component={FaceCheckScreen}
             options={{ title: 'Проверка Face-ID' }}
           />

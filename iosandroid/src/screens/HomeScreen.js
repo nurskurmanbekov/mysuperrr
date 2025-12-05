@@ -59,10 +59,7 @@ const HomeScreen = ({ navigation }) => {
       <ScrollView>
         <View style={styles.header}>
           <Text style={styles.welcome}>Добро пожаловать</Text>
-          <Text style={styles.userInfo}>{user?.name || user?.inn}</Text>
-          {user?.attributes?.fio && (
-            <Text style={styles.userFio}>{user.attributes.fio}</Text>
-          )}
+          <Text style={styles.userInfo}>{user?.attributes?.fio || user?.name || user?.inn}</Text>
         </View>
 
         <View style={styles.menu}>
@@ -78,6 +75,13 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Profile')}
           >
             <Text style={styles.menuItemText}>👤 Мой профиль</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <Text style={styles.menuItemText}>🔔 Уведомления</Text>
           </TouchableOpacity>
 
           {/* GPS контроль */}
