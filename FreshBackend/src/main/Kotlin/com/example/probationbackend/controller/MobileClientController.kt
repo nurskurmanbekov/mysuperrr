@@ -57,7 +57,7 @@ class MobileClientController(
         }
 
         val token = authHeader.substring(7)
-        val inn = jwtTokenProvider.getInnFromToken(token)
+        val inn = jwtTokenProvider.getInnFromToken(token) ?: return null
 
         return userRepository.findByInn(inn).orElse(null)
     }
