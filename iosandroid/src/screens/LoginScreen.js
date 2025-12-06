@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,46 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../store/authContext';
+import {
+  isBiometricAvailable,
+  hasBiometricCredentials,
+  authenticateWithBiometrics,
+  getBiometricCredentials,
+  getBiometricTypeName,
+  saveBiometricCredentials,
+} from '../services/biometricAuth';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricHasCredentials, setBiometricHasCredentials] = useState(false);
+  const [biometricType, setBiometricType] = useState('Биометрия');
+  const [showBiometricOption, setShowBiometricOption] = useState(false);
   const { login } = useAuth();
+
+  useEffect(() => {
+    checkBiometricAvailability();
+  }, []);
+
+  const checkBiometricAvailability = async () => {
+    const available = await isBiometricAvailable();
+    const hasCredentials = await hasBiometricCredentials();
+    const typeName = await getBiometricTypeName();
+
+    setBiometricAvailable(available);
+    setBiometricHasCredentials(hasCredentials);
+    setBiometricType(typeName);
+    setShowBiometricOption(available && hasCredentials);
+
+    // Автоматически предлагаем биометрию при запуске, если доступна
+    if (available && hasCredentials) {
+      setTimeout(() => {
+        handleBiometricLogin();
+      }, 500);
+    }
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -30,7 +64,54 @@ const LoginScreen = ({ navigation }) => {
     if (!result.success) {
       Alert.alert('Ошибка входа', result.message);
     } else {
-      // ИСПРАВЛЕНИЕ: После успешного логина переходим на главный экран
+      // Предлагаем сохранить учетные данные для биометрии
+      if (biometricAvailable && !biometricHasCredentials) {
+        Alert.alert(
+          `Включить ${biometricType}?`,
+          `Хотите использовать ${biometricType} для быстрого входа в приложение?`,
+          [
+            {
+              text: 'Нет',
+              style: 'cancel',
+              onPress: () => navigation.replace('Home'),
+            },
+            {
+              text: 'Да',
+              onPress: async () => {
+                await saveBiometricCredentials(email, password);
+                setBiometricHasCredentials(true);
+                setShowBiometricOption(true);
+                navigation.replace('Home');
+              },
+            },
+          ]
+        );
+      } else {
+        navigation.replace('Home');
+      }
+    }
+  };
+
+  const handleBiometricLogin = async () => {
+    const credentials = await getBiometricCredentials();
+    if (!credentials) {
+      Alert.alert('Ошибка', 'Учетные данные не найдены');
+      return;
+    }
+
+    const authResult = await authenticateWithBiometrics();
+    if (!authResult.success) {
+      console.log('Биометрическая аутентификация отменена');
+      return;
+    }
+
+    setLoading(true);
+    const result = await login(credentials.login, credentials.password);
+    setLoading(false);
+
+    if (!result.success) {
+      Alert.alert('Ошибка входа', result.message);
+    } else {
       navigation.replace('Home');
     }
   };
@@ -68,6 +149,24 @@ const LoginScreen = ({ navigation }) => {
             {loading ? 'Вход...' : 'Войти'}
           </Text>
         </TouchableOpacity>
+
+        {showBiometricOption && (
+          <TouchableOpacity
+            style={[styles.biometricButton, loading && styles.buttonDisabled]}
+            onPress={handleBiometricLogin}
+            disabled={loading}
+          >
+            <Text style={styles.biometricButtonText}>
+              {`Войти с ${biometricType}`}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {biometricAvailable && !biometricHasCredentials && (
+          <Text style={styles.biometricHint}>
+            {`После первого входа вы сможете использовать ${biometricType}`}
+          </Text>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -118,6 +217,25 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  biometricButton: {
+    backgroundColor: '#34C759',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  biometricButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  biometricHint: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 15,
+    lineHeight: 16,
   },
 });
 

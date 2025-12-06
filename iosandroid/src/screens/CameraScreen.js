@@ -17,7 +17,11 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
   const takePicture = async () => {
     if (!cameraRef.current) {
       console.log('❌ Camera ref is null');
-      Alert.alert('Ошибка', 'Камера не готова. Попробуйте еще раз.');
+      Alert.alert(
+        'Ошибка камеры',
+        'Камера еще не готова. Пожалуйста, подождите несколько секунд и попробуйте снова.',
+        [{ text: 'OK' }]
+      );
       return;
     }
 
@@ -32,7 +36,14 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
         skipProcessing: false,
       });
 
-      console.log('✅ Photo taken:', photo.uri);
+      console.log('✅ Photo taken successfully');
+      console.log('Photo URI:', photo.uri);
+      console.log('Photo width:', photo.width);
+      console.log('Photo height:', photo.height);
+
+      if (!photo || !photo.uri) {
+        throw new Error('Не удалось получить фото. URI отсутствует.');
+      }
 
       // Конвертируем фото в нужный формат
       const processedPhoto = {
@@ -41,11 +52,29 @@ const CameraScreen = ({ onPhotoTaken, onCancel, mode = 'front' }) => {
         name: `face_check_${Date.now()}.jpg`,
       };
 
+      console.log('✅ Photo processed, calling onPhotoTaken...');
       onPhotoTaken(processedPhoto);
     } catch (error) {
       console.log('❌ Error taking picture:', error);
-      console.log('Error details:', JSON.stringify(error));
-      Alert.alert('Ошибка', `Не удалось сделать фото: ${error.message || 'Неизвестная ошибка'}`);
+      console.log('Error name:', error.name);
+      console.log('Error message:', error.message);
+      console.log('Error stack:', error.stack);
+
+      let errorMessage = 'Не удалось сделать фото';
+      if (error.message?.includes('Camera')) {
+        errorMessage = 'Ошибка доступа к камере. Проверьте разрешения в настройках.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert(
+        'Ошибка съемки',
+        errorMessage,
+        [
+          { text: 'Отмена', style: 'cancel', onPress: onCancel },
+          { text: 'Попробовать снова', onPress: () => setLoading(false) },
+        ]
+      );
     } finally {
       setLoading(false);
     }
