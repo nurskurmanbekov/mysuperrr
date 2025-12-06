@@ -101,7 +101,11 @@ class AdminController(
             mapOf("error" to "Unauthorized")
         )
 
+        println("✓ UPDATE EMPLOYEE: User ${currentUser.inn} (role: ${currentUser.attributes?.get("role")}) updating employee $employeeId")
+        println("✓ UPDATE DATA: $request")
+
         if (!isDeptAdmin(currentUser)) {
+            println("✗ ACCESS DENIED: User ${currentUser.inn} is not deptAdmin")
             return ResponseEntity.status(403).body(
                 mapOf("error" to "Доступ запрещён. Только Администратор департамента может редактировать сотрудников.")
             )
@@ -114,8 +118,10 @@ class AdminController(
                 newRole = request.role,
                 newDistrictIds = request.districtIds
             )
+            println("✓ EMPLOYEE UPDATED: ${employee.inn} (id: ${employee.id})")
             ResponseEntity.ok(employee)
         } catch (e: IllegalArgumentException) {
+            println("✗ UPDATE ERROR: ${e.message}")
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         }
     }
@@ -163,7 +169,10 @@ class AdminController(
             mapOf("error" to "Unauthorized")
         )
 
+        println("✓ CHANGE PASSWORD: User ${currentUser.inn} (role: ${currentUser.attributes?.get("role")}) changing password for employee $employeeId")
+
         if (!isDeptAdmin(currentUser)) {
+            println("✗ ACCESS DENIED: User ${currentUser.inn} is not deptAdmin")
             return ResponseEntity.status(403).body(
                 mapOf("error" to "Доступ запрещён. Только Администратор департамента может менять пароли.")
             )
@@ -171,8 +180,10 @@ class AdminController(
 
         return try {
             adminService.changeEmployeePassword(employeeId, request.newPassword)
+            println("✓ PASSWORD CHANGED: Employee $employeeId password updated successfully")
             ResponseEntity.ok(mapOf("message" to "Password changed successfully"))
         } catch (e: IllegalArgumentException) {
+            println("✗ PASSWORD CHANGE ERROR: ${e.message}")
             ResponseEntity.badRequest().body(mapOf("error" to e.message))
         }
     }
