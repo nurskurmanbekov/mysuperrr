@@ -165,13 +165,16 @@ export const AdminPanel: React.FC = () => {
 
   const updateEmployee = async (employeeId: number, updates: any) => {
     try {
-      await adminAPI.updateEmployee(employeeId, updates);
-      loadEmployees();
+      console.log('Обновление сотрудника:', employeeId, updates);
+      const response = await adminAPI.updateEmployee(employeeId, updates);
+      console.log('Ответ сервера:', response.data);
+      await loadEmployees();
       setEditingEmployee(null);
       alert('Сотрудник успешно обновлен!');
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      alert('Ошибка при обновлении сотрудника');
+    } catch (error: any) {
+      console.error('Ошибка при обновлении сотрудника:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+      alert(`Ошибка при обновлении сотрудника: ${errorMessage}`);
     }
   };
 
@@ -180,13 +183,20 @@ export const AdminPanel: React.FC = () => {
       alert('Введите новый пароль');
       return;
     }
+    if (newPassword.length < 4) {
+      alert('Пароль должен быть не менее 4 символов');
+      return;
+    }
     try {
-      await adminAPI.changeEmployeePassword(employeeId, newPassword);
+      console.log('Изменение пароля для сотрудника:', employeeId);
+      const response = await adminAPI.changeEmployeePassword(employeeId, newPassword);
+      console.log('Ответ сервера:', response.data);
       setChangingPassword(null);
       alert('Пароль успешно изменен!');
-    } catch (error) {
-      console.error('Error changing password:', error);
-      alert('Ошибка при изменении пароля');
+    } catch (error: any) {
+      console.error('Ошибка при изменении пароля:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+      alert(`Ошибка при изменении пароля: ${errorMessage}`);
     }
   };
 
@@ -508,7 +518,12 @@ export const AdminPanel: React.FC = () => {
                   ...changingPassword,
                   newPassword: e.target.value
                 })}
-                placeholder="Введите новый пароль"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    changePassword(changingPassword.employeeId, changingPassword.newPassword);
+                  }
+                }}
+                placeholder="Введите новый пароль (минимум 4 символа)"
                 autoFocus
               />
             </div>
