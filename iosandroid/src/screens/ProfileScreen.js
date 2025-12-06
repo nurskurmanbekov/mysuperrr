@@ -9,14 +9,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../store/authContext';
-import { deviceAPI, faceCheckAPI } from '../services/api';
+import { mobileAPI } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ProfileScreen = () => {
   const { user, logout } = useAuth();
-  const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [faceCheckHistory, setFaceCheckHistory] = useState([]);
+  const [clientData, setClientData] = useState(null);
 
   // 🔍 ДИАГНОСТИКА: Проверяем user объект
   useEffect(() => {
@@ -40,38 +39,13 @@ const ProfileScreen = () => {
   const loadProfileData = async () => {
     try {
       setLoading(true);
-
-      // Загружаем устройства пользователя
-      try {
-        const devicesResponse = await deviceAPI.getDeviceByUniqueId(user.name);
-
-        // 🔍 ДИАГНОСТИКА: Проверяем devices данные
-        console.log('═══════════════════════════════════════════');
-        console.log('🔍 ProfileScreen - DEVICES RESPONSE:');
-        console.log('devicesResponse.data:', JSON.stringify(devicesResponse.data, null, 2));
-        if (devicesResponse.data && devicesResponse.data[0]) {
-          console.log('─────────────────────────────────────────');
-          console.log('First device.disabled type:', typeof devicesResponse.data[0].disabled);
-          console.log('First device.disabled value:', devicesResponse.data[0].disabled);
-        }
-        console.log('═══════════════════════════════════════════');
-
-        if (devicesResponse.data) {
-          setDevices(devicesResponse.data);
-        }
-      } catch (deviceError) {
-        // Устройство не найдено в Traccar - это нормально для новых пользователей
-        console.log('No device found for user, showing empty device list');
-        setDevices([]);
-      }
-
-      // Здесь можно добавить загрузку истории проверок
-      // const historyResponse = await faceCheckAPI.getHistory(user.name);
-      // setFaceCheckHistory(historyResponse.data);
-
+      // Загружаем данные клиента из реестра
+      const response = await mobileAPI.getProfile();
+      setClientData(response.data);
+      console.log('Client data loaded:', response.data);
     } catch (error) {
       console.log('Error loading profile data:', error);
-      // Не показываем Alert при отсутствии устройств
+      Alert.alert('Ошибка', 'Не удалось загрузить данные профиля');
     } finally {
       setLoading(false);
     }
@@ -112,85 +86,18 @@ const ProfileScreen = () => {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Личная информация</Text>
         <View style={styles.infoCard}>
-          <InfoRow label="ИНН" value={user.name} />
-          <InfoRow label="Email" value={user.email} />
-          <InfoRow 
-            label="Статус" 
-            value={user.administrator ? 'Администратор' : 'Пользователь'} 
-          />
+          <InfoRow label="ФИО" value={clientData?.fio || 'Не указано'} />
+          <InfoRow label="Возраст" value={clientData?.age ? `${clientData.age} лет` : 'Не указано'} />
+          <InfoRow label="ИНН" value={clientData?.inn || user.name} />
         </View>
-      </View>
-
-      {/* Устройства */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Мои устройства</Text>
-        {devices.length > 0 ? (
-          devices.map((device, index) => (
-            <View key={index} style={styles.deviceCard}>
-              <Text style={styles.deviceName}>{device.name || 'Устройство'}</Text>
-              <Text style={styles.deviceId}>ID: {device.uniqueId}</Text>
-              <Text style={styles.deviceStatus}>
-                Статус: {device.status || 'неизвестно'}
-              </Text>
-              
-              {device.attributes && (
-                <View style={styles.attributes}>
-                  {device.attributes.lastFaceAt && (
-                    <Text style={styles.attribute}>
-                      Последняя проверка: {new Date(device.attributes.lastFaceAt).toLocaleString()}
-                    </Text>
-                  )}
-                  {device.attributes.lastFaceOkAt && (
-                    <Text style={styles.attribute}>
-                      Успешная проверка: {new Date(device.attributes.lastFaceOkAt).toLocaleString()}
-                    </Text>
-                  )}
-                  {device.attributes.lastFaceDist && (
-                    <Text style={styles.attribute}>
-                      Точность: {(1 - device.attributes.lastFaceDist).toFixed(4)}
-                    </Text>
-                  )}
-                </View>
-              )}
-            </View>
-          ))
-        ) : (
-          <Text style={styles.noData}>Устройства не найдены</Text>
-        )}
-      </View>
-
-      {/* История проверок (заглушка) */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>История проверок</Text>
-        {faceCheckHistory.length > 0 ? (
-          faceCheckHistory.map((check, index) => (
-            <View key={index} style={styles.historyItem}>
-              <Text style={styles.historyDate}>
-                {new Date(check.taken_at).toLocaleString()}
-              </Text>
-              <Text style={[
-                styles.historyOutcome,
-                check.outcome === 'ok' ? styles.success : styles.error
-              ]}>
-                {getOutcomeText(check.outcome)}
-              </Text>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.noData}>История проверок пуста</Text>
-        )}
       </View>
 
       {/* Настройки */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Настройки</Text>
-        
+
         <TouchableOpacity style={styles.settingButton} onPress={clearCache}>
           <Text style={styles.settingButtonText}>Очистить кэш</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.settingButton}>
-          <Text style={styles.settingButtonText}>Уведомления</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.settingButton}>
@@ -214,18 +121,6 @@ const InfoRow = ({ label, value }) => (
     <Text style={styles.infoValue}>{value}</Text>
   </View>
 );
-
-const getOutcomeText = (outcome) => {
-  const outcomes = {
-    'ok': 'Успешно',
-    'failed': 'Не пройдено',
-    'declined': 'Отклонено',
-    'failed_network': 'Ошибка сети',
-    'late_ok': 'Успешно (поздно)',
-    'late_failed': 'Не пройдено (поздно)',
-  };
-  return outcomes[outcome] || outcome;
-};
 
 const styles = StyleSheet.create({
   container: {

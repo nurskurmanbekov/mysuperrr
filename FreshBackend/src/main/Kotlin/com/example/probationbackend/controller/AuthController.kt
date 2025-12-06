@@ -17,7 +17,7 @@ class AuthController(
 
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<*> {
-        val user = authService.authenticate(request.email, request.password)
+        val user = authService.authenticate(request.login, request.password)
         return if (user != null) {
             val rbacAttributes = authService.getUserRbacAttributes(user)
             val userResponse = mapOf(
@@ -29,6 +29,8 @@ class AuthController(
             )
 
             val token = jwtTokenProvider.generateToken(user)
+
+            println("✓ LOGIN SUCCESS: User ${user.inn} (${user.userType}) logged in")
 
             // Возврат токена и пользователя
             ResponseEntity.ok<Map<String, Any>>(mapOf("token" to token, "user" to userResponse))
@@ -57,6 +59,17 @@ class AuthController(
             // Находим пользователя в базе по ID
             val user = authService.findUserById(userId)
             if (user != null) {
+                // ВАЖНО: Блокируем клиентов (осужденных) от доступа к веб-интерфейсу
+                if (user.userType == "probationer") {
+                    println("✗ SESSION BLOCKED: Client (probationer) ${user.inn} attempted to access web interface")
+                    return ResponseEntity.status(403).body<Map<String, String>>(
+                        mapOf(
+                            "message" to "Доступ запрещён. Клиенты могут использовать только мобильное приложение.",
+                            "error" to "PROBATIONER_WEB_ACCESS_DENIED"
+                        )
+                    )
+                }
+
                 // Получаем RBAC атрибуты
                 val rbacAttributes = authService.getUserRbacAttributes(user)
                 val userResponse = mapOf(
@@ -85,15 +98,3 @@ class AuthController(
         return ResponseEntity.ok(Unit)
     }
 }
-
-// DTO остаются без изменений
-data class LoginRequest(
-    val email: String,
-    val password: String
-)
-
-data class LoginResponse(
-    val token: String? = null,
-    val user: User? = null,
-    val message: String? = null
-)

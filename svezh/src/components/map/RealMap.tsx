@@ -35,15 +35,21 @@ interface ClientWithPosition {
   birthDate?: string;
   sex?: string;
   inn?: string;
-  passportNumber?: string;
-  registrationAddress?: string;
-  actualAddress?: string;
-  phoneNumber?: string;
-  emergencyContact?: string;
-  supervisionType?: string;
-  supervisionStartDate?: string;
-  supervisionEndDate?: string;
-  districtName?: string;
+  passport?: string;
+  regAddress?: string;
+  factAddress?: string;
+  contact1?: string;
+  contact2?: string;
+  obsType?: string;
+  obsStart?: string;
+  obsEnd?: string;
+  unit?: string;
+  articles?: Array<{
+    id?: number;
+    article?: string;
+    part?: string;
+    point?: string;
+  }>;
   photoKey?: string;
   status: string;
   position?: {
@@ -69,33 +75,42 @@ const RealMap: React.FC = () => {
 
   const loadClients = useCallback(async () => {
     try {
-      const response = await api.get('/admin/clients');
-      const clientsData = response.data || [];
+      // Получаем клиентов и их последние GPS позиции из нашего backend
+      const [clientsResponse, positionsResponse] = await Promise.all([
+        api.get('/admin/clients'),
+        api.get('/positions/latest')
+      ]);
 
-      // Временно используем тестовые позиции в Бишкеке
-      // TODO: интегрировать с реальным Position API
-      const clientsWithPositions = clientsData.map((client: any, index: number) => {
-        const bishkekLocations = [
-          [42.8746, 74.5698], // Центр Бишкека
-          [42.8784, 74.5865], // Проспект Чуй
-          [42.8510, 74.5585], // Юг города
-          [42.8900, 74.6100], // Северо-восток
-          [42.8600, 74.5400], // Запад
-          [42.8350, 74.5900], // Ошский рынок
-          [42.8820, 74.5920], // Ала-Тоо площадь
-          [42.8450, 74.6050], // Политехнический институт
-        ];
+      const clientsData = clientsResponse.data || [];
+      const positionsData = positionsResponse.data?.positions || [];
 
-        const location = bishkekLocations[index % bishkekLocations.length];
+      // Создаем Map для быстрого поиска позиций по uniqueId
+      const positionsMap = new Map();
+      positionsData.forEach((pos: any) => {
+        positionsMap.set(pos.uniqueId, pos);
+      });
+
+      // Объединяем клиентов с их позициями
+      const clientsWithPositions = clientsData.map((client: any) => {
+        const position = positionsMap.get(client.uniqueId || client.inn);
+
+        // Определяем статус: online если позиция обновлялась < 5 минут назад
+        let status = 'offline';
+        if (position && position.serverTime) {
+          const lastUpdate = new Date(position.serverTime);
+          const now = new Date();
+          const diffMinutes = (now.getTime() - lastUpdate.getTime()) / (1000 * 60);
+          status = diffMinutes < 5 ? 'online' : 'offline';
+        }
 
         return {
           ...client,
-          status: index % 3 === 0 ? 'offline' : 'online', // Временный статус
-          position: {
-            latitude: location[0],
-            longitude: location[1],
-            timestamp: new Date().toISOString()
-          }
+          status,
+          position: position ? {
+            latitude: position.latitude,
+            longitude: position.longitude,
+            timestamp: position.timestamp
+          } : null
         };
       });
 
@@ -111,6 +126,13 @@ const RealMap: React.FC = () => {
   useEffect(() => {
     setIsClient(true);
     loadClients();
+
+    // Обновляем данные каждые 10 секунд для отображения актуального статуса
+    const interval = setInterval(() => {
+      loadClients();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [loadClients]);
 
   const getStatusColor = (status: string) => {
@@ -241,7 +263,7 @@ const RealMap: React.FC = () => {
                       </div>
                       <div className="info-row">
                         <span className="label">Паспорт:</span>
-                        <span className="value">{client.passportNumber || 'Не указано'}</span>
+                        <span className="value">{client.passport || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -249,11 +271,11 @@ const RealMap: React.FC = () => {
                       <h4>📍 Адреса</h4>
                       <div className="info-row">
                         <span className="label">Регистрация:</span>
-                        <span className="value">{client.registrationAddress || 'Не указано'}</span>
+                        <span className="value">{client.regAddress || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Фактический:</span>
-                        <span className="value">{client.actualAddress || 'Не указано'}</span>
+                        <span className="value">{client.factAddress || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -261,11 +283,11 @@ const RealMap: React.FC = () => {
                       <h4>📞 Контакты</h4>
                       <div className="info-row">
                         <span className="label">Телефон:</span>
-                        <span className="value">{client.phoneNumber || 'Не указано'}</span>
+                        <span className="value">{client.contact1 || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Экстренный контакт:</span>
-                        <span className="value">{client.emergencyContact || 'Не указано'}</span>
+                        <span className="value">{client.contact2 || 'Не указано'}</span>
                       </div>
                     </div>
 
@@ -273,20 +295,49 @@ const RealMap: React.FC = () => {
                       <h4>⚖️ Надзор</h4>
                       <div className="info-row">
                         <span className="label">Тип:</span>
-                        <span className="value">{client.supervisionType || 'Не указано'}</span>
+                        <span className="value">{client.obsType || 'Не указано'}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Начало:</span>
-                        <span className="value">{formatDate(client.supervisionStartDate)}</span>
+                        <span className="value">{formatDate(client.obsStart)}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Окончание:</span>
-                        <span className="value">{formatDate(client.supervisionEndDate)}</span>
+                        <span className="value">{formatDate(client.obsEnd)}</span>
                       </div>
                       <div className="info-row">
                         <span className="label">Район:</span>
-                        <span className="value">{client.districtName || 'Не указано'}</span>
+                        <span className="value">{client.unit || 'Не указано'}</span>
                       </div>
+                    </div>
+
+                    <div className="info-section">
+                      <h4>⚖️ Статья осуждения</h4>
+                      {client.articles && client.articles.length > 0 ? (
+                        <div style={{ marginTop: '8px' }}>
+                          {client.articles.map((articleItem, index) => {
+                            const parts = [];
+                            if (articleItem.article) parts.push(`ст. ${articleItem.article}`);
+                            if (articleItem.part) parts.push(`ч. ${articleItem.part}`);
+                            if (articleItem.point) parts.push(`п. «${articleItem.point}»`);
+                            const articleText = parts.length > 0 ? `${parts.join(' ')} УК` : 'Не указано';
+
+                            return (
+                              <div key={index} style={{
+                                marginBottom: '6px',
+                                color: '#374151',
+                                fontSize: '14px'
+                              }}>
+                                {articleText}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="info-row">
+                          <span className="value">Не указано</span>
+                        </div>
+                      )}
                     </div>
 
                     {client.position && (

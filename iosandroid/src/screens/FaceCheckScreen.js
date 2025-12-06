@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as ImagePicker from 'expo-image-picker';
 import { faceCheckAPI } from '../services/api';
 import { useAuth } from '../store/authContext';
 import CameraScreen from './CameraScreen';
@@ -64,18 +63,6 @@ const FaceCheckScreen = () => {
     }
   };
 
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 0.8,
-    });
-
-    if (!result.canceled) {
-      handlePhotoTaken(result.assets[0]);
-    }
-  };
-
   if (cameraVisible) {
     return (
       <CameraScreen
@@ -98,10 +85,6 @@ const FaceCheckScreen = () => {
         <View style={styles.buttonsContainer}>
           <TouchableOpacity style={styles.button} onPress={takePhoto}>
             <Text style={styles.buttonText}>Сделать фото</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={[styles.button, styles.secondaryButton]} onPress={pickImage}>
-            <Text style={styles.buttonText}>Выбрать из галереи</Text>
           </TouchableOpacity>
         </View>
       )}

@@ -100,9 +100,13 @@ class AdminService(
         newRole: String? = null,
         newDistrictIds: List<Long>? = null
     ): User {
+        println("✓ AdminService.updateEmployee: userId=$userId, newDistrictId=$newDistrictId, newRole=$newRole, newDistrictIds=$newDistrictIds")
+
         val user = userRepository.findById(userId).orElseThrow {
             IllegalArgumentException("User not found")
         }
+
+        println("✓ Found user: ${user.inn} (type: ${user.userType}, current role: ${user.attributes?.get("role")})")
 
         if (user.userType != "employee") {
             throw IllegalArgumentException("User is not an employee")
@@ -118,6 +122,7 @@ class AdminService(
         val updatedAttributes = user.attributes?.toMutableMap() ?: mutableMapOf()
 
         if (newRole != null) {
+            println("✓ Updating role from ${updatedAttributes["role"]} to $newRole")
             updatedAttributes["role"] = newRole
         }
 
@@ -134,7 +139,9 @@ class AdminService(
             attributes = updatedAttributes
         )
 
-        return userRepository.save(updated)
+        val saved = userRepository.save(updated)
+        println("✓ User saved: ${saved.inn} (new role: ${saved.attributes?.get("role")})")
+        return saved
     }
 
     /**
@@ -178,6 +185,27 @@ class AdminService(
         }
 
         userRepository.deleteById(userId)
+    }
+
+    fun changeEmployeePassword(userId: Long, newPassword: String) {
+        println("✓ AdminService.changeEmployeePassword: userId=$userId, newPasswordLength=${newPassword.length}")
+
+        val user = userRepository.findById(userId).orElseThrow {
+            IllegalArgumentException("User not found")
+        }
+
+        println("✓ Found user: ${user.inn} (type: ${user.userType})")
+
+        if (user.userType != "employee") {
+            throw IllegalArgumentException("User is not an employee")
+        }
+
+        val encodedPassword = passwordEncoder.encode(newPassword)
+        println("✓ Password encoded successfully")
+
+        val updatedUser = user.copy(passwordHash = encodedPassword)
+        val saved = userRepository.save(updatedUser)
+        println("✓ Password updated and saved for user: ${saved.inn}")
     }
 
     // ============================================

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import api, { adminAPI } from '../../services/api';
+import { useAuth } from '../../hooks/useAuth';
 import './AdminPanel.css';
 
 interface District {
@@ -31,6 +32,7 @@ interface Client {
 }
 
 export const AdminPanel: React.FC = () => {
+  const { user } = useAuth();
   const [tab, setTab] = useState<'employees' | 'clients'>('employees');
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -45,6 +47,12 @@ export const AdminPanel: React.FC = () => {
     mruId: '',
     districtId: ''
   });
+
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [changingPassword, setChangingPassword] = useState<{employeeId: number, newPassword: string} | null>(null);
+
+  // Проверка роли: только deptAdmin может редактировать
+  const isDeptAdmin = user?.attributes?.role === 'deptAdmin';
 
   useEffect(() => {
     loadDistricts();
@@ -130,14 +138,65 @@ export const AdminPanel: React.FC = () => {
   const transferClient = async (clientId: number, newDistrictId: string) => {
     if (!newDistrictId) return;
     try {
-      await api.put(`/admin/clients/${clientId}/transfer`, null, {
-        params: { newDistrictId: parseInt(newDistrictId) }
+      await api.put(`/admin/clients/${clientId}/transfer`, {
+        districtId: parseInt(newDistrictId)
       });
       loadClients();
       alert('Осужденный успешно переведен!');
     } catch (error) {
       console.error('Error transferring client:', error);
       alert('Ошибка при переводе осужденного');
+    }
+  };
+
+  const deleteEmployee = async (employeeId: number) => {
+    if (!window.confirm('Вы уверены, что хотите удалить этого сотрудника?')) {
+      return;
+    }
+    try {
+      await adminAPI.deleteEmployee(employeeId);
+      loadEmployees();
+      alert('Сотрудник успешно удален!');
+    } catch (error) {
+      console.error('Error deleting employee:', error);
+      alert('Ошибка при удалении сотрудника');
+    }
+  };
+
+  const updateEmployee = async (employeeId: number, updates: any) => {
+    try {
+      console.log('Обновление сотрудника:', employeeId, updates);
+      const response = await adminAPI.updateEmployee(employeeId, updates);
+      console.log('Ответ сервера:', response.data);
+      await loadEmployees();
+      setEditingEmployee(null);
+      alert('Сотрудник успешно обновлен!');
+    } catch (error: any) {
+      console.error('Ошибка при обновлении сотрудника:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+      alert(`Ошибка при обновлении сотрудника: ${errorMessage}`);
+    }
+  };
+
+  const changePassword = async (employeeId: number, newPassword: string) => {
+    if (!newPassword) {
+      alert('Введите новый пароль');
+      return;
+    }
+    if (newPassword.length < 4) {
+      alert('Пароль должен быть не менее 4 символов');
+      return;
+    }
+    try {
+      console.log('Изменение пароля для сотрудника:', employeeId);
+      const response = await adminAPI.changeEmployeePassword(employeeId, newPassword);
+      console.log('Ответ сервера:', response.data);
+      setChangingPassword(null);
+      alert('Пароль успешно изменен!');
+    } catch (error: any) {
+      console.error('Ошибка при изменении пароля:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Неизвестная ошибка';
+      alert(`Ошибка при изменении пароля: ${errorMessage}`);
     }
   };
 
@@ -172,9 +231,10 @@ export const AdminPanel: React.FC = () => {
 
       {tab === 'employees' ? (
         <div className="employees-section">
-          <div className="create-employee-card">
-            <h2>Добавить сотрудника</h2>
-            <form onSubmit={createEmployee} className="employee-form">
+          {isDeptAdmin && (
+            <div className="create-employee-card">
+              <h2>Добавить сотрудника</h2>
+              <form onSubmit={createEmployee} className="employee-form">
               <div className="form-row">
                 <div className="form-group">
                   <label>ИНН (логин)</label>
@@ -264,6 +324,7 @@ export const AdminPanel: React.FC = () => {
               </button>
             </form>
           </div>
+          )}
 
           <div className="employees-list-card">
             <h2>Список сотрудников</h2>
@@ -275,6 +336,7 @@ export const AdminPanel: React.FC = () => {
                     <th>Unique ID</th>
                     <th>Роль</th>
                     <th>МРУ</th>
+                    {isDeptAdmin && <th>Действия</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -284,6 +346,54 @@ export const AdminPanel: React.FC = () => {
                       <td>{emp.uniqueId}</td>
                       <td>{getRoleName(emp.attributes?.role || 'inspector')}</td>
                       <td>{emp.mruId || '-'}</td>
+                      {isDeptAdmin && (
+                        <td>
+                          <button
+                            onClick={() => setEditingEmployee(emp)}
+                            style={{
+                              marginRight: '5px',
+                              padding: '6px 12px',
+                              backgroundColor: '#3b82f6',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            Редактировать
+                          </button>
+                          <button
+                            onClick={() => setChangingPassword({employeeId: emp.id, newPassword: ''})}
+                            style={{
+                              marginRight: '5px',
+                              padding: '6px 12px',
+                              backgroundColor: '#f59e0b',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            Изменить пароль
+                          </button>
+                          <button
+                            onClick={() => deleteEmployee(emp.id)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: '#ef4444',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '12px'
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -327,6 +437,126 @@ export const AdminPanel: React.FC = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно редактирования сотрудника */}
+      {editingEmployee && (
+        <div className="modal-overlay" onClick={() => setEditingEmployee(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Редактировать сотрудника</h2>
+            <div className="form-group">
+              <label>ИНН (логин)</label>
+              <input type="text" value={editingEmployee.inn} disabled style={{backgroundColor: '#f0f0f0'}} />
+            </div>
+            <div className="form-group">
+              <label>Unique ID</label>
+              <input type="text" value={editingEmployee.uniqueId} disabled style={{backgroundColor: '#f0f0f0'}} />
+            </div>
+            <div className="form-group">
+              <label>Роль</label>
+              <select
+                value={editingEmployee.attributes?.role || 'inspector'}
+                onChange={(e) => setEditingEmployee({
+                  ...editingEmployee,
+                  attributes: { ...editingEmployee.attributes, role: e.target.value }
+                })}
+              >
+                <option value="deptAdmin">Администратор департамента</option>
+                <option value="mruAdmin">Администратор МРУ</option>
+                <option value="inspector">Инспектор</option>
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button
+                onClick={() => updateEmployee(editingEmployee.id, {
+                  role: editingEmployee.attributes?.role
+                })}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginRight: '10px'
+                }}
+              >
+                Сохранить
+              </button>
+              <button
+                onClick={() => setEditingEmployee(null)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модальное окно изменения пароля */}
+      {changingPassword && (
+        <div className="modal-overlay" onClick={() => setChangingPassword(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h2>Изменить пароль</h2>
+            <div className="form-group">
+              <label>Новый пароль</label>
+              <input
+                type="password"
+                value={changingPassword.newPassword}
+                onChange={(e) => setChangingPassword({
+                  ...changingPassword,
+                  newPassword: e.target.value
+                })}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    changePassword(changingPassword.employeeId, changingPassword.newPassword);
+                  }
+                }}
+                placeholder="Введите новый пароль (минимум 4 символа)"
+                autoFocus
+              />
+            </div>
+            <div className="modal-actions">
+              <button
+                onClick={() => {
+                  changePassword(changingPassword.employeeId, changingPassword.newPassword);
+                }}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  marginRight: '10px'
+                }}
+              >
+                Изменить пароль
+              </button>
+              <button
+                onClick={() => setChangingPassword(null)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Отмена
+              </button>
             </div>
           </div>
         </div>

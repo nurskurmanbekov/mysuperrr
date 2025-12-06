@@ -3,7 +3,7 @@ import * as TaskManager from 'expo-task-manager';
 // import * as NetInfo from '@react-native-community/netinfo'; // Временно отключено - пакет не установлен
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { TRACCAR_CONFIG } from '../utils/constants';
+import { TRACCAR_CONFIG, API_CONFIG } from '../utils/constants';
 
 const GPS_TASK_NAME = 'BACKGROUND_LOCATION_TASK';
 const OFFLINE_GPS_KEY = 'OFFLINE_GPS_DATA';
@@ -299,13 +299,15 @@ class GPSService {
   // Отправка через Spring Boot бэкенд (который сам пересылает в Traccar)
   async sendViaSpringBoot(positionData) {
     try {
-      const API_BASE_URL = 'http://85.113.27.42/api';
+      // Используем тот же BASE_URL что и для авторизации (с портом 8530)
+      const API_BASE_URL = API_CONFIG.BASE_URL; // http://85.113.27.42:8530/api
 
-      console.log('🚀 Отправка GPS через Nginx → Spring Boot API:', {
+      console.log('🚀 Отправка GPS через Spring Boot API:', {
         id: positionData.id,
         lat: positionData.lat,
         lon: positionData.lon,
         timestamp: new Date(positionData.timestamp * 1000).toISOString(),
+        url: `${API_BASE_URL}/traccar/positions`
       });
 
       const response = await fetch(`${API_BASE_URL}/traccar/positions`, {
