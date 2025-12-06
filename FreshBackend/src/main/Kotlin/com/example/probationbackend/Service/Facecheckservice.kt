@@ -120,26 +120,60 @@ class FaceCheckService(
                 return FaceVerificationResult(false, "Лицо не найдено на фото", null)
             }
 
-            val knownHistogram = calculateHistogram(knownMat, knownFaces.get(0))
-            val selfieHistogram = calculateHistogram(selfieMat, selfieFaces.get(0))
-            val distance = compareHistograms(knownHistogram, selfieHistogram)
+            // Проверка размеров лиц для дополнительной безопасности
+            val knownFaceRect = knownFaces.get(0)
+            val selfieFaceRect = selfieFaces.get(0)
 
-            // ВАЖНО: Настроен порог для улучшенного алгоритма
-            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
-            // Используем все 3 канала HSV (H+S+V) вместо одного H
-            val tolerance = 0.45  // Сбалансированный порог для 3-канального алгоритма
-            val match = distance <= tolerance
+            val knownFaceArea = knownFaceRect.width() * knownFaceRect.height()
+            val selfieFaceArea = selfieFaceRect.width() * selfieFaceRect.height()
+            val faceAreaRatio = Math.max(knownFaceArea, selfieFaceArea).toDouble() /
+                               Math.min(knownFaceArea, selfieFaceArea).toDouble()
 
             println("═══════════════════════════════════════════")
-            println("🔍 FACE ID VERIFICATION (User) - IMPROVED ALGORITHM")
+            println("🔍 FACE ID VERIFICATION (User) - STRICT ALGORITHM")
             println("User ID: ${user.uniqueId}")
-            println("Distance: %.4f".format(distance))
-            println("Tolerance: $tolerance")
-            println("Algorithm: 3-channel HSV (Hue + Saturation + Value)")
-            println("Result: ${if (match) "✅ MATCH" else "❌ NO MATCH"}")
+            println("Known face size: ${knownFaceRect.width()}x${knownFaceRect.height()} (area: $knownFaceArea)")
+            println("Selfie face size: ${selfieFaceRect.width()}x${selfieFaceRect.height()} (area: $selfieFaceArea)")
+            println("Face area ratio: %.2f".format(faceAreaRatio))
+
+            // Проверка 1: Размеры лиц не должны слишком отличаться
+            if (faceAreaRatio > 2.5) {
+                println("❌ REJECTED: Face size difference too large (ratio: %.2f > 2.5)".format(faceAreaRatio))
+                println("═══════════════════════════════════════════")
+                return FaceVerificationResult(false,
+                    "Размер лица слишком отличается от эталона. Приблизьтесь или отдалитесь от камеры.",
+                    null)
+            }
+
+            val knownHistogram = calculateHistogram(knownMat, knownFaceRect)
+            val selfieHistogram = calculateHistogram(selfieMat, selfieFaceRect)
+
+            // Проверка 2: Сравнение по Bhattacharyya distance (основной метод)
+            val bhattacharyyaDistance = compareHistograms(knownHistogram, selfieHistogram)
+
+            // Проверка 3: Дополнительное сравнение по корреляции
+            val correlationDistance = 1.0 - org.bytedeco.opencv.global.opencv_imgproc.compareHist(
+                knownHistogram, selfieHistogram,
+                org.bytedeco.opencv.global.opencv_imgproc.HISTCMP_CORREL
+            )
+
+            // КРИТИЧНО: Строгий порог для безопасности!
+            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
+            // Используем СТРОГИЙ порог 0.20 вместо 0.45
+            val bhattacharyyaTolerance = 0.20  // СТРОГИЙ порог - только очень похожие лица
+            val correlationTolerance = 0.35     // Дополнительная проверка
+
+            val bhattacharyyaMatch = bhattacharyyaDistance <= bhattacharyyaTolerance
+            val correlationMatch = correlationDistance <= correlationTolerance
+            val match = bhattacharyyaMatch && correlationMatch  // ОБА теста должны пройти!
+
+            println("Bhattacharyya distance: %.4f (tolerance: $bhattacharyyaTolerance) - ${if (bhattacharyyaMatch) "✓ PASS" else "✗ FAIL"}".format(bhattacharyyaDistance))
+            println("Correlation distance: %.4f (tolerance: $correlationTolerance) - ${if (correlationMatch) "✓ PASS" else "✗ FAIL"}".format(correlationDistance))
+            println("Algorithm: Dual-check (3-channel HSV + Correlation)")
+            println("Final Result: ${if (match) "✅ MATCH (both checks passed)" else "❌ NO MATCH"}")
             println("═══════════════════════════════════════════")
 
-            traccarService.updateFaceIdAttributes(user.uniqueId, match, distance,
+            traccarService.updateFaceIdAttributes(user.uniqueId, match, bhattacharyyaDistance,
                 if (match) "Лицо распознано успешно" else "Лицо не распознано")
 
             val faceCheckEvent = FaceCheckEvent(
@@ -147,7 +181,7 @@ class FaceCheckService(
                 deviceId = null,
                 outcome = if (match) "ok" else "failed",
                 takenAt = LocalDateTime.now(),
-                distance = distance,
+                distance = bhattacharyyaDistance,
                 checkId = null,
                 deadlineIso = null,
                 appVersion = null
@@ -156,7 +190,7 @@ class FaceCheckService(
 
             return FaceVerificationResult(match,
                 if (match) "Лицо распознано успешно" else "Лицо не распознано",
-                distance)
+                bhattacharyyaDistance)
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -180,28 +214,62 @@ class FaceCheckService(
                 return FaceVerificationResult(false, "Лицо не найдено на фото", null)
             }
 
-            val knownHistogram = calculateHistogram(knownMat, knownFaces.get(0))
-            val selfieHistogram = calculateHistogram(selfieMat, selfieFaces.get(0))
-            val distance = compareHistograms(knownHistogram, selfieHistogram)
+            // Проверка размеров лиц для дополнительной безопасности
+            val knownFaceRect = knownFaces.get(0)
+            val selfieFaceRect = selfieFaces.get(0)
 
-            // ВАЖНО: Настроен порог для улучшенного алгоритма
-            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
-            // Используем все 3 канала HSV (H+S+V) вместо одного H
-            val tolerance = 0.45  // Сбалансированный порог для 3-канального алгоритма
-            val match = distance <= tolerance
+            val knownFaceArea = knownFaceRect.width() * knownFaceRect.height()
+            val selfieFaceArea = selfieFaceRect.width() * selfieFaceRect.height()
+            val faceAreaRatio = Math.max(knownFaceArea, selfieFaceArea).toDouble() /
+                               Math.min(knownFaceArea, selfieFaceArea).toDouble()
 
             println("═══════════════════════════════════════════")
-            println("🔍 FACE ID VERIFICATION (Client) - IMPROVED ALGORITHM")
+            println("🔍 FACE ID VERIFICATION (Client) - STRICT ALGORITHM")
             println("Client ID: ${client.id}, INN: ${client.inn}, uniqueId: ${client.uniqueId}")
-            println("Distance: %.4f".format(distance))
-            println("Tolerance: $tolerance")
-            println("Algorithm: 3-channel HSV (Hue + Saturation + Value)")
-            println("Result: ${if (match) "✅ MATCH" else "❌ NO MATCH"}")
+            println("Known face size: ${knownFaceRect.width()}x${knownFaceRect.height()} (area: $knownFaceArea)")
+            println("Selfie face size: ${selfieFaceRect.width()}x${selfieFaceRect.height()} (area: $selfieFaceArea)")
+            println("Face area ratio: %.2f".format(faceAreaRatio))
+
+            // Проверка 1: Размеры лиц не должны слишком отличаться
+            if (faceAreaRatio > 2.5) {
+                println("❌ REJECTED: Face size difference too large (ratio: %.2f > 2.5)".format(faceAreaRatio))
+                println("═══════════════════════════════════════════")
+                return FaceVerificationResult(false,
+                    "Размер лица слишком отличается от эталона. Приблизьтесь или отдалитесь от камеры.",
+                    null)
+            }
+
+            val knownHistogram = calculateHistogram(knownMat, knownFaceRect)
+            val selfieHistogram = calculateHistogram(selfieMat, selfieFaceRect)
+
+            // Проверка 2: Сравнение по Bhattacharyya distance (основной метод)
+            val bhattacharyyaDistance = compareHistograms(knownHistogram, selfieHistogram)
+
+            // Проверка 3: Дополнительное сравнение по корреляции
+            val correlationDistance = 1.0 - org.bytedeco.opencv.global.opencv_imgproc.compareHist(
+                knownHistogram, selfieHistogram,
+                org.bytedeco.opencv.global.opencv_imgproc.HISTCMP_CORREL
+            )
+
+            // КРИТИЧНО: Строгий порог для безопасности!
+            // Bhattacharyya distance: 0 = идентичны, 1 = полностью разные
+            // Используем СТРОГИЙ порог 0.20 вместо 0.45
+            val bhattacharyyaTolerance = 0.20  // СТРОГИЙ порог - только очень похожие лица
+            val correlationTolerance = 0.35     // Дополнительная проверка
+
+            val bhattacharyyaMatch = bhattacharyyaDistance <= bhattacharyyaTolerance
+            val correlationMatch = correlationDistance <= correlationTolerance
+            val match = bhattacharyyaMatch && correlationMatch  // ОБА теста должны пройти!
+
+            println("Bhattacharyya distance: %.4f (tolerance: $bhattacharyyaTolerance) - ${if (bhattacharyyaMatch) "✓ PASS" else "✗ FAIL"}".format(bhattacharyyaDistance))
+            println("Correlation distance: %.4f (tolerance: $correlationTolerance) - ${if (correlationMatch) "✓ PASS" else "✗ FAIL"}".format(correlationDistance))
+            println("Algorithm: Dual-check (3-channel HSV + Correlation)")
+            println("Final Result: ${if (match) "✅ MATCH (both checks passed)" else "❌ NO MATCH"}")
             println("═══════════════════════════════════════════")
 
             // Обновляем атрибуты Traccar для клиента (если есть uniqueId)
             if (client.uniqueId != null) {
-                traccarService.updateFaceIdAttributes(client.uniqueId!!, match, distance,
+                traccarService.updateFaceIdAttributes(client.uniqueId!!, match, bhattacharyyaDistance,
                     if (match) "Лицо распознано успешно" else "Лицо не распознано")
             }
 
@@ -211,7 +279,7 @@ class FaceCheckService(
                 deviceId = null,
                 outcome = if (match) "ok" else "failed",
                 takenAt = LocalDateTime.now(),
-                distance = distance,
+                distance = bhattacharyyaDistance,
                 checkId = null,
                 deadlineIso = null,
                 appVersion = null
@@ -220,7 +288,7 @@ class FaceCheckService(
 
             return FaceVerificationResult(match,
                 if (match) "Лицо распознано успешно" else "Лицо не распознано",
-                distance)
+                bhattacharyyaDistance)
 
         } catch (e: Exception) {
             e.printStackTrace()
