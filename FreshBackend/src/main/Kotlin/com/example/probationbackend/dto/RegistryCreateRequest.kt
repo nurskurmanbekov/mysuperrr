@@ -25,7 +25,7 @@ data class RegistryCreateRequest(
     val articles: List<ArticleDto>? = null,
     val extraInfo: String? = null,
     val measures: String? = null,
-    val appPassword: String, // Пароль для приложения
+    val appPassword: String? = null, // Пароль для приложения (обязателен при создании, опционален при обновлении)
     val photoKey: String? = null,
     val unit: String?
 ) {

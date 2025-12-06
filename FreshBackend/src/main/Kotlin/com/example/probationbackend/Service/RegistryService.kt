@@ -28,6 +28,11 @@ class RegistryService(
             throw IllegalArgumentException("Client with INN ${request.inn} already exists")
         }
 
+        // 1.5. Проверяем, что пароль указан при создании
+        if (request.appPassword.isNullOrBlank()) {
+            throw IllegalArgumentException("Password is required when creating a client")
+        }
+
         // 2. Хешируем пароль для приложения
         val encodedAppPassword = passwordEncoder.encode(request.appPassword)
 
@@ -150,6 +155,13 @@ class RegistryService(
             }
         } else existingClient.district
 
+        // Обновляем пароль только если он указан
+        val updatedPassword = if (!request.appPassword.isNullOrBlank()) {
+            passwordEncoder.encode(request.appPassword)
+        } else {
+            existingClient.appPassword // Сохраняем старый пароль
+        }
+
         val updatedClient = existingClient.copy(
             fio = request.fio,
             inn = if (request.noInn != true) request.inn else null,
@@ -171,6 +183,7 @@ class RegistryService(
             erpNumber = request.erpNumber,
             sex = request.sex,
             extraInfo = request.extraInfo,
+            appPassword = updatedPassword, // Обновляем пароль только если он указан
             district = district // Обновляем район
         )
 
